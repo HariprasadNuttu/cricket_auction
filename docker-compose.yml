@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: auction_db
+    restart: always
+    environment:
+      POSTGRES_USER: auction
+      POSTGRES_PASSWORD: auction123
+      POSTGRES_DB: auctiondb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+
+  server:
+    build: ./server
+    container_name: auction_server
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://auction:auction123@postgres:5432/auctiondb
+    ports:
+      - "3000:3000"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: auction_client
+    restart: always
+    ports:
+      - "4200:80"
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

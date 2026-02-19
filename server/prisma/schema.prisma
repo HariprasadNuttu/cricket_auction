@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  VIEWER
+}
+
+enum PlayerStatus {
+  ACTIVE
+  SOLD
+  UNSOLD
+}
+
+enum PlayerCategory {
+  BATSMAN
+  BOWLER
+  ALLROUNDER
+  WICKETKEEPER
+}
+
+enum AuctionStatus {
+  READY
+  LIVE
+  PAUSED
+  COMPLETED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(VIEWER)
+  
+  // User (Owner) has one Team
+  team         Team?
+  
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  bidsMade     BidLog[]
+}
+
+model Team {
+  id              Int      @id @default(autoincrement())
+  name            String   @unique
+  totalBudget     Int      @default(2000)
+  remainingBudget Int      @default(2000)
+  totalPlayers    Int      @default(0)
+  
+  // Team belongs to one User (Owner)
+  ownerId         Int      @unique
+  owner           User     @relation(fields: [ownerId], references: [id])
+  
+  players         Player[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  BidLog          BidLog[]
+}
+
+model Player {
+  id         Int            @id @default(autoincrement())
+  name       String
+  category   PlayerCategory
+  basePrice  Int            @default(20)
+  status     PlayerStatus   @default(ACTIVE)
+  soldPrice  Int?
+  
+  teamId     Int?
+  team       Team?          @relation(fields: [teamId], references: [id])
+  
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  
+  BidLog     BidLog[]
+}
+
+model AuctionState {
+  id              Int           @id @default(1)
+  status          AuctionStatus @default(READY)
+  timerEndsAt     DateTime?
+  currentPrice    Int           @default(0)
+  currentPlayerId Int?
+  currentBidderId Int? 
+  currentBidderTeamId Int? 
+  
+  version         Int           @default(0)
+  updatedAt       DateTime      @updatedAt
+}
+
+model BidLog {
+  id        Int      @id @default(autoincrement())
+  amount    Int
+  
+  teamId    Int
+  team      Team     @relation(fields: [teamId], references: [id])
+  
+  playerId  Int
+  player    Player   @relation(fields: [playerId], references: [id])
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  timestamp DateTime @default(now())
+}

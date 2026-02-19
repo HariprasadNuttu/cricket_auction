@@ -1,0 +1,41 @@
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Register</div>
+                <div class="card-body">
+                    <form (ngSubmit)="register()">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" [(ngModel)]="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email address</label>
+                            <input type="email" class="form-control" [(ngModel)]="email" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" [(ngModel)]="password" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select class="form-select" [(ngModel)]="role" name="role">
+                                <option value="VIEWER">Viewer</option>
+                                <option value="OWNER">Team Owner</option>
+                                <option value="ADMIN">Admin</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" *ngIf="role === 'OWNER'">
+                            <label class="form-label">Team Name</label>
+                            <input type="text" class="form-control" [(ngModel)]="teamName" name="teamName" required>
+                        </div>
+
+                        <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+                        <button type="submit" class="btn btn-primary">Register</button>
+                        <a routerLink="/login" class="btn btn-link">Login</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

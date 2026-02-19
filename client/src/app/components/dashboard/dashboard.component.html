@@ -1,0 +1,61 @@
+<div class="container mt-4">
+    <div class="row">
+        <!-- Admin Controls -->
+        <div class="col-12 mb-3" *ngIf="user?.role === 'ADMIN'">
+            <div class="card">
+                <div class="card-header bg-danger text-white">Admin Controls</div>
+                <div class="card-body">
+                    <h5>Unsold/Active Players</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-dark" *ngFor="let p of players"
+                            [disabled]="p.status !== 'ACTIVE'" (click)="startAuction(p.id)">
+                            Auction {{ p.name }} ({{ p.category }})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Card -->
+        <div class="col-md-4">
+            <div class="card" *ngIf="currentPlayer; else noPlayer">
+                <div class="card-header bg-primary text-white">
+                    Current Player
+                </div>
+                <div class="card-body text-center">
+                    <h3>{{ currentPlayer.name }}</h3>
+                    <p class="badge bg-secondary">{{ currentPlayer.category }}</p>
+                    <h4>Base Price: {{ currentPlayer.basePrice }}</h4>
+                    <hr>
+                    <h2 class="text-success">Current Bid: {{ auctionState?.currentPrice }}</h2>
+                    <p *ngIf="auctionState?.timerEndsAt">Timer Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}
+                    </p>
+                </div>
+                <div class="card-footer" *ngIf="user?.role === 'OWNER'">
+                    <button class="btn btn-success w-100" (click)="placeBid(auctionState.currentPrice + 10)">
+                        Bid +10
+                    </button>
+                </div>
+            </div>
+            <ng-template #noPlayer>
+                <div class="card">
+                    <div class="card-body">Waiting for auction to start...</div>
+                </div>
+            </ng-template>
+        </div>
+
+        <!-- Teams Leaderboard -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Teams</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        *ngFor="let team of teams">
+                        {{ team.name }}
+                        <span class="badge bg-primary rounded-pill">{{ team.remainingBudget }} Left</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
