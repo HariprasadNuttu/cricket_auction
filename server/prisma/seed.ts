@@ -30,6 +30,51 @@ async function main() {
     });
     console.log('Admin created');
 
+    // 2.1 Create Owners and Teams
+    const password = await bcrypt.hash('123456', 10);
+
+    const owners = [
+        { email: 'chinnarao@auction.com', name: 'Chinnarao', teamName: 'chinnarao' },
+        { email: 'mahesh@auction.com', name: 'Mahesh', teamName: 'mahesh' },
+        { email: 'chandu@auction.com', name: 'Chandu', teamName: 'Chandu' },
+        { email: 'nivas@auction.com', name: 'Nivas', teamName: 'Nivas' },
+    ];
+
+    for (const o of owners) {
+        const user = await prisma.user.upsert({
+            where: { email: o.email },
+            update: {},
+            create: {
+                email: o.email,
+                password,
+                name: o.name,
+                role: Role.OWNER,
+                team: {
+                    create: {
+                        name: o.teamName
+                    }
+                }
+            }
+        });
+        console.log(`Owner ${o.name} and Team ${o.teamName} created/verified`);
+    }
+
+    // 2.2 Create Viewers
+    const viewers = ['viewer1@auction.com', 'viewer2@auction.com'];
+    for (const v of viewers) {
+        await prisma.user.upsert({
+            where: { email: v },
+            update: {},
+            create: {
+                email: v,
+                password,
+                name: v.split('@')[0],
+                role: Role.VIEWER
+            }
+        });
+    }
+    console.log('Viewers created');
+
     // 3. Create Dummy Players
     const players = [
         { name: 'Harsha', category: PlayerCategory.BATSMAN, basePrice: 20 },
