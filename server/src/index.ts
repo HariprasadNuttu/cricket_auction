@@ -2,6 +2,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import app from './app';
+import { initializeSocket } from './socket/index';
 
 dotenv.config();
 
@@ -14,14 +15,8 @@ const io = new Server(httpServer, {
     }
 });
 
-io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
-    // Import socket handlers here
-
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-    });
-});
+// Initialize socket handlers
+initializeSocket(io);
 
 const PORT = process.env.PORT || 3000;
 

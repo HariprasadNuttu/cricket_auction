@@ -2,7 +2,12 @@ import { Server, Socket } from 'socket.io';
 import prisma from '../utils/prisma';
 
 export const registerAuctionHandlers = (io: Server, socket: Socket) => {
-    const onPlaceBid = async (payload: { amount: number; teamId: number }) => {
+    const onPlaceBid = async (payload: { 
+        amount: number; 
+        teamId: number; 
+        isAdminBid?: boolean; 
+        adminUserId?: number 
+    }) => {
         try {
             // 1. Validate Auction State
             const auctionState = await prisma.auctionState.findUnique({ where: { id: 1 } });
@@ -35,8 +40,21 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 return;
             }
 
-            // 4. Update Auction State
-            const newTimerEndsAt = new Date(now.getTime() + 15 * 1000); // Reset to 15s
+            // 4. Determine userId for bid log
+            // If it's an admin bid, use admin's userId, otherwise use team owner's userId
+            let userIdForLog = team.ownerId;
+            if (payload.isAdminBid && payload.adminUserId) {
+                // Verify admin user exists and is actually an admin
+                const adminUser = await prisma.user.findUnique({ 
+                    where: { id: payload.adminUserId } 
+                });
+                if (adminUser && adminUser.role === 'ADMIN') {
+                    userIdForLog = payload.adminUserId;
+                }
+            }
+
+            // 5. Update Auction State
+            const newTimerEndsAt = new Date(now.getTime() + 60 * 1000); // Reset to 1 minute
 
             await prisma.$transaction([
                 prisma.auctionState.update({
@@ -44,31 +62,32 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                     data: {
                         currentPrice: payload.amount,
                         currentBidderTeamId: payload.teamId,
-                        // currentBidderId: userId // If we had userId context here
                         timerEndsAt: newTimerEndsAt,
                         version: { increment: 1 } // Optimistic locking pattern
                     }
                 }),
-                // Log bid
+                // Log bid - userId will be admin's ID if admin bid, otherwise team owner's ID
                 prisma.bidLog.create({
                     data: {
                         amount: payload.amount,
                         teamId: payload.teamId,
                         playerId: auctionState.currentPlayerId!,
-                        userId: team.ownerId // Assuming owner placed it
+                        userId: userIdForLog
                     }
                 })
             ]);
 
-            // 5. Broadcast Update
+            // 6. Broadcast Update
             io.emit('AUCTION_UPDATE', {
                 currentPrice: payload.amount,
                 currentBidderTeamId: payload.teamId,
                 timerEndsAt: newTimerEndsAt
             });
 
+            console.log(`Bid placed: ${payload.amount} by team ${team.name}${payload.isAdminBid ? ' (via admin)' : ''}`);
+
         } catch (error: any) {
-            console.error(error);
+            console.error('Bid placement error:', error);
             socket.emit('ERROR', { message: 'Bid failed' });
         }
     };

@@ -1,16 +1,31 @@
 <div class="container mt-4">
     <div class="row">
-        <!-- Admin Controls -->
+        <!-- Admin Actions - Top Section -->
         <div class="col-12 mb-3" *ngIf="user?.role === 'ADMIN'">
             <div class="card">
-                <div class="card-header bg-danger text-white">Admin Controls</div>
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <span>Admin Controls</span>
+                    <button class="btn btn-light btn-sm" 
+                        [disabled]="auctionState?.status === 'LIVE' || getActivePlayersCount() === 0"
+                        (click)="startRandomAuction()">
+                        Start Next Random Player
+                    </button>
+                </div>
                 <div class="card-body">
-                    <h5>Unsold/Active Players</h5>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-outline-dark" *ngFor="let p of players"
-                            [disabled]="p.status !== 'ACTIVE'" (click)="startAuction(p.id)">
-                            Auction {{ p.name }} ({{ p.category }})
-                        </button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Quick Stats</h6>
+                            <div class="d-flex gap-3">
+                                <span class="badge bg-primary">Active: {{ getActivePlayersCount() }}</span>
+                                <span class="badge bg-success">Sold: {{ getSoldPlayersCount() }}</span>
+                                <span class="badge bg-secondary">Unsold: {{ getUnsoldPlayersCount() }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                Total Players: {{ players.length }}
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -28,13 +43,53 @@
                     <h4>Base Price: {{ currentPlayer.basePrice }}</h4>
                     <hr>
                     <h2 class="text-success">Current Bid: {{ auctionState?.currentPrice }}</h2>
-                    <p *ngIf="auctionState?.timerEndsAt">Timer Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}
+                    <p *ngIf="auctionState?.currentBidderTeamId" class="mt-2">
+                        <span class="badge bg-info">Current Bidder: {{ getTeamName(auctionState.currentBidderTeamId) }}</span>
+                    </p>
+                    <p *ngIf="auctionState?.timerEndsAt" class="mt-2">
+                        <strong>Timer:</strong> <span class="badge bg-warning text-dark">{{ timer }}</span>
+                    </p>
+                    <p *ngIf="auctionState?.timerEndsAt" class="mt-1">
+                        <small class="text-muted">Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}</small>
                     </p>
                 </div>
-                <div class="card-footer" *ngIf="user?.role === 'OWNER'">
-                    <button class="btn btn-success w-100" (click)="placeBid(auctionState.currentPrice + 10)">
+                <!-- Admin Bid Controls -->
+                <div class="card-footer" *ngIf="user?.role === 'ADMIN' && auctionState?.status === 'LIVE'">
+                    <h6 class="mb-3">Place Bid on Behalf of Team</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Select Team:</label>
+                        <select class="form-select" [(ngModel)]="selectedTeamId">
+                            <option [value]="null">-- Select Team --</option>
+                            <option *ngFor="let team of teams" [value]="team.id">
+                                {{ team.name }} (Budget: {{ team.remainingBudget }})
+                            </option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success w-100 mb-2" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !selectedTeamId"
+                        (click)="placeBidForTeam(auctionState.currentPrice + 10)">
                         Bid +10
                     </button>
+                    <div class="input-group mb-2">
+                        <input type="number" 
+                            class="form-control" 
+                            [(ngModel)]="customBidAmount" 
+                            [min]="(auctionState?.currentPrice || 0) + 1"
+                            placeholder="Enter bid amount">
+                        <button class="btn btn-primary" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0) || !selectedTeamId"
+                            (click)="placeBidForTeam(customBidAmount)">Bid</button>
+                    </div>
+                    <small class="text-muted d-block" *ngIf="auctionState">
+                        Minimum bid: {{ auctionState.currentPrice + 1 }}
+                    </small>
+                </div>
+                
+                <!-- Owner View - No Bid Controls -->
+                <div class="card-footer" *ngIf="user?.role === 'OWNER'">
+                    <div class="alert alert-info mb-0">
+                        <small>Only admin can place bids on behalf of teams.</small>
+                    </div>
                 </div>
             </div>
             <ng-template #noPlayer>
@@ -55,6 +110,53 @@
                         <span class="badge bg-primary rounded-pill">{{ team.remainingBudget }} Left</span>
                     </li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- Players Table - Bottom Section -->
+        <div class="col-12 mt-4" *ngIf="user?.role === 'ADMIN'">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Players List</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Base Price</th>
+                                    <th>Status</th>
+                                    <th>Sold Price</th>
+                                    <th>Team</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let p of players; let i = index" 
+                                    [class.table-success]="p.id === currentPlayer?.id"
+                                    [class.table-warning]="p.status === 'SOLD'"
+                                    [class.table-secondary]="p.status === 'UNSOLD'">
+                                    <td>{{ i + 1 }}</td>
+                                    <td><strong>{{ p.name }}</strong></td>
+                                    <td><span class="badge bg-secondary">{{ p.category }}</span></td>
+                                    <td>{{ p.basePrice }}</td>
+                                    <td>
+                                        <span class="badge" 
+                                            [class.bg-success]="p.status === 'SOLD'"
+                                            [class.bg-danger]="p.status === 'UNSOLD'"
+                                            [class.bg-primary]="p.status === 'ACTIVE'">
+                                            {{ p.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ p.soldPrice || '-' }}</td>
+                                    <td>{{ getTeamNameById(p.teamId) || '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

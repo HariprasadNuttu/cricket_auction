@@ -20,4 +20,37 @@ app.get('/health', (req, res) => {
     res.send('OK');
 });
 
+// Debug endpoint to test token (remove in production)
+app.get('/api/debug/token', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.json({ error: 'No token provided' });
+    }
+    
+    try {
+        const jwt = require('jsonwebtoken');
+        const secret = process.env.JWT_SECRET || 'supersecretkey';
+        const decoded = jwt.decode(token, { complete: true });
+        
+        res.json({
+            tokenPresent: !!token,
+            tokenLength: token.length,
+            secretUsed: secret.substring(0, 10) + '...',
+            decoded: decoded,
+            isValid: (() => {
+                try {
+                    jwt.verify(token, secret);
+                    return true;
+                } catch (e: any) {
+                    return { valid: false, error: e.message };
+                }
+            })()
+        });
+    } catch (error: any) {
+        res.json({ error: error.message });
+    }
+});
+
 export default app;

@@ -77,17 +77,14 @@ async function main() {
 
     // 3. Create Dummy Players
     const players = [
-        { name: 'Harsha', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Appanna', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Srikanth', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'KP', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Prakash', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Chandra Sekhar', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Ravi', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Manish', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Krupa', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Jagga', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Nivas', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Poorna', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Rajesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Sathya', category: PlayerCategory.BATSMAN, basePrice: 20 },
@@ -119,7 +116,6 @@ async function main() {
         { name: 'Sai Prabha', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Surendra', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Rahul', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Vijay (Regular)', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Ananth', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Raghava', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Ramesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
@@ -133,10 +129,8 @@ async function main() {
         { name: 'Naveen peeru friend', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Raja', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Shankar Rahul Friend', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Mahesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Gopi', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Suresh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'chinnarao', category: PlayerCategory.BATSMAN, basePrice: 20 },
         { name: 'Naresh', category: PlayerCategory.BATSMAN, basePrice: 20 }
     ];
 
