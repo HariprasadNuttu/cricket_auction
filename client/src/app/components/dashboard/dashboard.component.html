@@ -52,43 +52,70 @@
                     <p *ngIf="auctionState?.timerEndsAt" class="mt-1">
                         <small class="text-muted">Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}</small>
                     </p>
-                </div>
-                <!-- Admin Bid Controls -->
-                <div class="card-footer" *ngIf="user?.role === 'ADMIN' && auctionState?.status === 'LIVE'">
-                    <h6 class="mb-3">Place Bid on Behalf of Team</h6>
-                    <div class="mb-3">
-                        <label class="form-label">Select Team:</label>
-                        <select class="form-select" [(ngModel)]="selectedTeamId">
-                            <option [value]="null">-- Select Team --</option>
-                            <option *ngFor="let team of teams" [value]="team.id">
-                                {{ team.name }} (Budget: {{ team.remainingBudget }})
-                            </option>
-                        </select>
+                    
+                    <!-- Bid History -->
+                    <div class="mt-3" *ngIf="bidHistory && bidHistory.length > 0">
+                        <hr>
+                        <h6 class="text-start">Bid History:</h6>
+                        <div class="text-start" style="max-height: 200px; overflow-y: auto;">
+                            <div *ngFor="let bid of bidHistory" class="mb-2 p-2 border rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ getTeamNameById(bid.teamId) }}</strong>
+                                        <span class="badge bg-success ms-2">{{ bid.amount }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ bid.timestamp | date:'short' }}</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn btn-success w-100 mb-2" 
-                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !selectedTeamId"
-                        (click)="placeBidForTeam(auctionState.currentPrice + 10)">
-                        Bid +10
-                    </button>
-                    <div class="input-group mb-2">
-                        <input type="number" 
-                            class="form-control" 
-                            [(ngModel)]="customBidAmount" 
-                            [min]="(auctionState?.currentPrice || 0) + 1"
-                            placeholder="Enter bid amount">
-                        <button class="btn btn-primary" 
-                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0) || !selectedTeamId"
-                            (click)="placeBidForTeam(customBidAmount)">Bid</button>
-                    </div>
-                    <small class="text-muted d-block" *ngIf="auctionState">
-                        Minimum bid: {{ auctionState.currentPrice + 1 }}
-                    </small>
                 </div>
                 
                 <!-- Owner View - No Bid Controls -->
                 <div class="card-footer" *ngIf="user?.role === 'OWNER'">
                     <div class="alert alert-info mb-0">
                         <small>Only admin can place bids on behalf of teams.</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Team Bid Tiles - Below Current Player Card -->
+            <div class="row mt-3" *ngIf="user?.role === 'ADMIN' && auctionState?.status === 'LIVE'">
+                <div class="col-md-6 col-lg-3 mb-3" *ngFor="let team of teams">
+                    <div class="card h-100" [class.border-success]="auctionState?.currentBidderTeamId === team.id">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">{{ team.name }}</h6>
+                            <small class="text-muted">Budget: {{ team.remainingBudget }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    [disabled]="!canBid(team.id, auctionState?.currentPrice + 5)"
+                                    (click)="placeBidForTeam(auctionState.currentPrice + 5, team.id)">
+                                    +5
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    [disabled]="!canBid(team.id, auctionState?.currentPrice + 10)"
+                                    (click)="placeBidForTeam(auctionState.currentPrice + 10, team.id)">
+                                    +10
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    [disabled]="!canBid(team.id, auctionState?.currentPrice + 20)"
+                                    (click)="placeBidForTeam(auctionState.currentPrice + 20, team.id)">
+                                    +20
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    [disabled]="!canBid(team.id, auctionState?.currentPrice + 30)"
+                                    (click)="placeBidForTeam(auctionState.currentPrice + 30, team.id)">
+                                    +30
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                    [disabled]="!canBid(team.id, auctionState?.currentPrice + 50)"
+                                    (click)="placeBidForTeam(auctionState.currentPrice + 50, team.id)">
+                                    +50
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -99,17 +126,32 @@
             </ng-template>
         </div>
 
-        <!-- Teams Leaderboard -->
+        <!-- Teams Leaderboard - Compact Table -->
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">Teams</div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center"
-                        *ngFor="let team of teams">
-                        {{ team.name }}
-                        <span class="badge bg-primary rounded-pill">{{ team.remainingBudget }} Left</span>
-                    </li>
-                </ul>
+                <div class="card-body p-2">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Team</th>
+                                <th class="text-end">Budget Left</th>
+                                <th class="text-end">Players</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let team of teams">
+                                <td><strong>{{ team.name }}</strong></td>
+                                <td class="text-end">
+                                    <span class="badge bg-primary">{{ team.remainingBudget }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-secondary">{{ team.totalPlayers }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

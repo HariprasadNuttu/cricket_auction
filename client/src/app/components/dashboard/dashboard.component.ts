@@ -17,6 +17,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   teams: any[] = [];
   players: any[] = [];
   currentPlayer: any = null;
+  bidHistory: any[] = [];
 
   user: any = null;
   timer: any = '00:00';
@@ -64,6 +65,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             ? (data.timerEndsAt instanceof Date ? data.timerEndsAt : new Date(data.timerEndsAt))
             : null;
           this.auctionState.currentBidderTeamId = data.currentBidderTeamId;
+          
+          // Update bid history if provided
+          if (data.bidHistory) {
+            this.bidHistory = data.bidHistory;
+          }
           
           console.log('Updated auction state:', {
             currentPrice: this.auctionState.currentPrice,
@@ -190,11 +196,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: (data) => {
         this.auctionState = data.state;
-        this.teams = data.teams;
-        this.players = data.players;
+        this.teams = data.teams || [];
+        this.players = data.players || [];
         this.currentPlayer = data.currentPlayer;
+        this.bidHistory = data.bidHistory || [];
+        
+        // Log teams for debugging
+        console.log('Teams loaded:', this.teams.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
       },
-      error: (e) => console.error(e)
+      error: (e) => {
+        console.error('Error fetching state:', e);
+        this.teams = [];
+      }
     });
   }
 
@@ -257,7 +270,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return team ? team.name : '';
   }
 
-  placeBidForTeam(amount: number) {
+  placeBidForTeam(amount: number, teamId?: number | string) {
     // Only admin can place bids
     if (this.user?.role !== 'ADMIN') {
       console.error('Only admin can place bids');
@@ -265,9 +278,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Use provided teamId or fall back to selectedTeamId
+    // Convert to number to handle string IDs from dropdown
+    const targetTeamId = teamId ? Number(teamId) : (this.selectedTeamId ? Number(this.selectedTeamId) : null);
+    
     // Validate team selection
-    if (!this.selectedTeamId) {
+    if (!targetTeamId || isNaN(targetTeamId)) {
       alert('Please select a team first');
+      return;
+    }
+    
+    // Validate teams array is loaded
+    if (!this.teams || this.teams.length === 0) {
+      console.error('Teams array is empty');
+      alert('Teams not loaded. Please refresh the page.');
+      this.fetchState();
       return;
     }
 
@@ -299,11 +324,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Find selected team
-    const selectedTeam = this.teams.find(t => t.id === this.selectedTeamId);
+    // Find selected team - handle both string and number types
+    const selectedTeam = this.teams.find(t => t.id === Number(targetTeamId) || t.id === targetTeamId);
     if (!selectedTeam) {
-      console.error('Selected team not found');
-      alert('Selected team not found. Please refresh the page.');
+      console.error('Selected team not found', {
+        targetTeamId,
+        targetTeamIdType: typeof targetTeamId,
+        teams: this.teams,
+        teamIds: this.teams.map(t => ({ id: t.id, name: t.name, idType: typeof t.id }))
+      });
+      alert(`Selected team not found (ID: ${targetTeamId}). Available teams: ${this.teams.map(t => t.name).join(', ')}`);
       return;
     }
 
@@ -327,6 +357,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Clear custom bid amount after placing bid
     this.customBidAmount = 0;
+  }
+
+  canBid(teamId: number, amount: number): boolean {
+    if (!this.auctionState || this.auctionState.status !== 'LIVE') {
+      return false;
+    }
+    
+    const team = this.teams.find(t => t.id === teamId);
+    if (!team) {
+      return false;
+    }
+    
+    // Check if amount is higher than current price and team has enough budget
+    return amount > this.auctionState.currentPrice && team.remainingBudget >= amount;
   }
 
   // Legacy method - kept for backward compatibility but disabled for owners

@@ -17,12 +17,29 @@ export const getAuctionState = async (req: Request, res: Response) => {
 
         // Attach current player details if exists
         let currentPlayer = null;
+        let bidHistory: any[] = [];
         if (state?.currentPlayerId) {
             currentPlayer = await prisma.player.findUnique({ where: { id: state.currentPlayerId } });
+            
+            // Get bid history for current player
+            bidHistory = await prisma.bidLog.findMany({
+                where: { playerId: state.currentPlayerId },
+                include: {
+                    team: {
+                        select: { id: true, name: true }
+                    },
+                    user: {
+                        select: { id: true, name: true, role: true }
+                    }
+                },
+                orderBy: { timestamp: 'desc' },
+                take: 20 // Last 20 bids
+            });
         }
 
-        res.json({ state, teams, players, currentPlayer });
+        res.json({ state, teams, players, currentPlayer, bidHistory });
     } catch (error) {
+        console.error('Error fetching auction state:', error);
         res.status(500).json({ error: 'Failed to fetch auction state' });
     }
 };

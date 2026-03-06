@@ -77,11 +77,27 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 })
             ]);
 
-            // 6. Broadcast Update
+            // 6. Get updated bid history for current player
+            const bidHistory = await prisma.bidLog.findMany({
+                where: { playerId: auctionState.currentPlayerId! },
+                include: {
+                    team: {
+                        select: { id: true, name: true }
+                    },
+                    user: {
+                        select: { id: true, name: true, role: true }
+                    }
+                },
+                orderBy: { timestamp: 'desc' },
+                take: 20
+            });
+
+            // 7. Broadcast Update
             io.emit('AUCTION_UPDATE', {
                 currentPrice: payload.amount,
                 currentBidderTeamId: payload.teamId,
-                timerEndsAt: newTimerEndsAt
+                timerEndsAt: newTimerEndsAt,
+                bidHistory: bidHistory
             });
 
             console.log(`Bid placed: ${payload.amount} by team ${team.name}${payload.isAdminBid ? ' (via admin)' : ''}`);

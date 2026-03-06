@@ -9,8 +9,8 @@ services:
       POSTGRES_USER: auction
       POSTGRES_PASSWORD: auction123
       POSTGRES_DB: auctiondb
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5434:5432"  # Commented out - database only accessible from Docker network
     volumes:
       - pgdata:/var/lib/postgresql/data
 
