@@ -1,0 +1,187 @@
+<div class="players-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Players Management</h2>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success" (click)="openCreateModal()" [disabled]="!selectedGroupId">
+        <i class="bi bi-plus-circle"></i> Add Player
+      </button>
+      <button class="btn btn-info" (click)="openUploadModal()" [disabled]="!selectedGroupId">
+        <i class="bi bi-upload"></i> Upload CSV
+      </button>
+      <button class="btn btn-warning" *ngIf="viewMode === 'group' && selectedSeasonId" (click)="openAddToSeasonModal()">
+        <i class="bi bi-calendar-plus"></i> Add to Season
+      </button>
+    </div>
+  </div>
+
+  <!-- View Mode Toggle -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn" [ngClass]="{'btn-primary': viewMode === 'group'}" (click)="switchViewMode('group')">
+          <i class="bi bi-people"></i> Group Players
+        </button>
+        <button type="button" class="btn" [ngClass]="{'btn-primary': viewMode === 'season'}" (click)="switchViewMode('season')">
+          <i class="bi bi-calendar3"></i> Season Players
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group and Season Selectors -->
+  <div class="row mb-4" *ngIf="viewMode === 'group'">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Group:</label>
+          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+            <option [value]="null">-- Select Group --</option>
+            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4" *ngIf="viewMode === 'season'">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Group:</label>
+          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+            <option [value]="null">-- Select Group --</option>
+            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Season:</label>
+          <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
+            <option [value]="null">-- Select Season --</option>
+            <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Players Table -->
+  <div class="card" *ngIf="(viewMode === 'group' && selectedGroupId) || (viewMode === 'season' && selectedSeasonId)">
+    <div class="card-body">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Player Name</th>
+            <th>Category</th>
+            <th>Base Price</th>
+            <th *ngIf="viewMode === 'season'">Status</th>
+            <th *ngIf="viewMode === 'season'">Team</th>
+            <th *ngIf="viewMode === 'season'">Sold Price</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of (viewMode === 'group' ? players : seasonPlayers)">
+            <td><strong>{{ player.name }}</strong></td>
+            <td>{{ player.category || player.role }}</td>
+            <td>₹{{ player.basePrice || 0 }}</td>
+            <td *ngIf="viewMode === 'season'">
+              <span class="badge" [ngClass]="{
+                'bg-success': player.status === 'SOLD',
+                'bg-primary': player.status === 'ACTIVE',
+                'bg-secondary': player.status === 'UNSOLD'
+              }">{{ player.status }}</span>
+            </td>
+            <td *ngIf="viewMode === 'season'">{{ player.team?.name || player.teamName || '-' }}</td>
+            <td *ngIf="viewMode === 'season'">₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
+            <td>
+              <button class="btn btn-sm btn-warning me-2" (click)="openEditModal(player)">
+                <i class="bi bi-pencil"></i> Edit
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deletePlayer(player.id)">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="(viewMode === 'group' ? players : seasonPlayers).length === 0">
+            <td [attr.colspan]="viewMode === 'season' ? '7' : '4'" class="text-center text-muted">No players found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Player Modal -->
+  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Player</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Player Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Category *</label>
+              <select class="form-select" [(ngModel)]="formData.category" name="category" required>
+                <option value="BATSMAN">Batsman</option>
+                <option value="BOWLER">Bowler</option>
+                <option value="ALLROUNDER">All-rounder</option>
+                <option value="WICKETKEEPER">Wicket Keeper</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Base Price *</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.basePrice" name="basePrice" min="0" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Country</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.country" name="country">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createPlayer()">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Upload CSV Modal -->
+  <div class="modal fade" [class.show]="showUploadModal" [style.display]="showUploadModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Upload Players CSV</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">CSV File</label>
+              <input type="file" class="form-control" accept=".csv" (change)="onFileSelected($event)">
+              <small class="form-text text-muted">Format: name,category,base_price,country</small>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="uploadCSV()">Upload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showUploadModal" [style.display]="showUploadModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Edit Modal (similar structure) -->
+  <!-- Add to Season Modal (similar structure) -->
+</div>

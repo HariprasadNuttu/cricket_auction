@@ -1,0 +1,131 @@
+<div class="seasons-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Seasons Management</h2>
+    <button class="btn btn-primary" (click)="openCreateModal()" [disabled]="!selectedGroupId">
+      <i class="bi bi-plus-circle"></i> Create Season
+    </button>
+  </div>
+
+  <!-- Group Selector -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <label class="form-label">Select Group:</label>
+      <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+        <option [value]="null">-- Select Group --</option>
+        <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Seasons Table -->
+  <div class="card" *ngIf="selectedGroupId">
+    <div class="card-body">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Season Name</th>
+            <th>Year</th>
+            <th>Budget</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let season of seasons">
+            <td><strong>{{ season.name }}</strong></td>
+            <td>{{ season.year }}</td>
+            <td>₹{{ season.budget || 0 }}</td>
+            <td>
+              <span class="badge" [ngClass]="{
+                'bg-secondary': season.status === 'DRAFT',
+                'bg-success': season.status === 'ACTIVE',
+                'bg-primary': season.status === 'COMPLETED'
+              }">{{ season.status }}</span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-info me-2" (click)="viewSeasonDetails(season.id)">
+                <i class="bi bi-eye"></i> View Details
+              </button>
+              <button class="btn btn-sm btn-warning me-2" (click)="openEditModal(season)">
+                <i class="bi bi-pencil"></i> Edit
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteSeason(season.id)">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="seasons.length === 0">
+            <td colspan="5" class="text-center text-muted">No seasons found. Create your first season!</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modals (same structure as groups) -->
+  <!-- Create Modal -->
+  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Season</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Season Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Year *</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.year" name="year" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Total Budget</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.budget" name="budget">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createSeason()">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Edit Modal -->
+  <div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Season</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Season Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Year *</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.year" name="year" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Total Budget</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.budget" name="budget">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="updateSeason()">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" (click)="closeModals()"></div>
+</div>

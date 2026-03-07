@@ -1,159 +1,243 @@
-import { PrismaClient, Role, PlayerStatus, PlayerCategory } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, Role, PlayerCategory, PlayerStatus } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-    // 1. Create Auction State
-    const auctionState = await prisma.auctionState.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
-            status: 'READY',
-            currentPrice: 0,
-            version: 0
-        }
-    });
-    console.log('Auction State initialized');
+    console.log('🌱 Starting seed...\n');
 
-    // 2. Create Admin
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    // 1. Create Admin User
+    console.log('👤 Creating admin user...');
     const admin = await prisma.user.upsert({
         where: { email: 'admin@auction.com' },
         update: {},
         create: {
             email: 'admin@auction.com',
-            password: adminPassword,
-            name: 'Super Admin',
+            password: await bcrypt.hash('admin123', 10),
+            name: 'Admin User',
             role: Role.ADMIN
         }
     });
-    console.log('Admin created');
+    console.log('✅ Admin created:', admin.email);
 
-    // 2.1 Create Owners and Teams
-    const password = await bcrypt.hash('123456', 10);
+    // 2. Create Group
+    console.log('\n📦 Creating default group...');
+    const group = await prisma.group.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            id: 1,
+            name: 'Cricket Lovers League',
+            description: 'Default cricket league for auction',
+            createdById: admin.id
+        }
+    });
+    console.log('✅ Group created:', group.name);
 
-    const owners = [
-        { email: 'chinnarao@auction.com', name: 'Chinnarao', teamName: 'chinnarao' },
-        { email: 'mahesh@auction.com', name: 'Mahesh', teamName: 'mahesh' },
-        { email: 'chandu@auction.com', name: 'Chandu', teamName: 'Chandu' },
-        { email: 'nivas@auction.com', name: 'Nivas', teamName: 'Nivas' },
+    // 3. Create Season
+    console.log('\n📅 Creating default season...');
+    const season = await prisma.season.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            id: 1,
+            groupId: group.id,
+            name: '2026 Season',
+            year: 2026,
+            status: 'DRAFT',
+            auctionStarted: false
+        }
+    });
+    console.log('✅ Season created:', season.name);
+
+    // 4. Create Owner Users and Teams
+    console.log('\n👥 Creating owners and teams...');
+    const teamData = [
+        { name: 'Mumbai Indians', ownerEmail: 'owner1@auction.com', ownerName: 'Ravi Kumar' },
+        { name: 'Chennai Super Kings', ownerEmail: 'owner2@auction.com', ownerName: 'Suresh Reddy' },
+        { name: 'Royal Challengers', ownerEmail: 'owner3@auction.com', ownerName: 'Kiran Sharma' },
+        { name: 'Delhi Capitals', ownerEmail: 'owner4@auction.com', ownerName: 'Priya Patel' }
     ];
 
-    for (const o of owners) {
-        const user = await prisma.user.upsert({
-            where: { email: o.email },
+    const teams = [];
+    for (const teamInfo of teamData) {
+        const owner = await prisma.user.upsert({
+            where: { email: teamInfo.ownerEmail },
             update: {},
             create: {
-                email: o.email,
-                password,
-                name: o.name,
-                role: Role.OWNER,
-                team: {
-                    create: {
-                        name: o.teamName
-                    }
+                email: teamInfo.ownerEmail,
+                password: await bcrypt.hash('owner123', 10),
+                name: teamInfo.ownerName,
+                role: Role.OWNER
+            }
+        });
+
+        const team = await prisma.team.upsert({
+            where: { 
+                seasonId_name: {
+                    seasonId: season.id,
+                    name: teamInfo.name
                 }
-            }
-        });
-        console.log(`Owner ${o.name} and Team ${o.teamName} created/verified`);
-    }
-
-    // 2.2 Create Viewers
-    const viewers = ['viewer1@auction.com', 'viewer2@auction.com'];
-    for (const v of viewers) {
-        await prisma.user.upsert({
-            where: { email: v },
+            },
             update: {},
             create: {
-                email: v,
-                password,
-                name: v.split('@')[0],
-                role: Role.VIEWER
+                seasonId: season.id,
+                name: teamInfo.name,
+                ownerId: owner.id,
+                totalBudget: 2000,
+                remainingBudget: 2000,
+                totalPlayers: 0
             }
         });
+        teams.push(team);
+        console.log(`✅ Team created: ${team.name} (Owner: ${owner.name})`);
     }
-    console.log('Viewers created');
 
-    // 3. Create Dummy Players
-    const players = [
-        { name: 'Appanna', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Srikanth', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'KP', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Chandra Sekhar', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Ravi', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Manish', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Krupa', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Jagga', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Poorna', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Rajesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Sathya', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Peeru', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Rajasekhar', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Vasu', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Ashok', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Amith', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Srinu', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Mani', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Akhil', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Venky', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Simhachalam', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Chitti Sekhar', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Somesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Aravind', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Gopi', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Anil', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Manoj', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Hari', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Praveen Sagar', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Sai Kiran', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Prasanth', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Naveen', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Veeraraju', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Manjji ganesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Dileep', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Sunny', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Sai Prabha', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Surendra', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Rahul', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Ananth', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Raghava', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Ramesh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Chandra', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Santhosh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Chandu', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Prasanth Friend Srikhar', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Barri Venkat', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Raju', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Naidu', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Naveen peeru friend', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Raja', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Shankar Rahul Friend', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Gopi', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Suresh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        { name: 'Naresh', category: PlayerCategory.BATSMAN, basePrice: 20 }
+    // 5. Create Players (Group level)
+    console.log('\n🏏 Creating players...');
+    const playersData = [
+        // Batsmen
+        { name: 'Virat Kohli', category: PlayerCategory.BATSMAN, basePrice: 50 },
+        { name: 'Rohit Sharma', category: PlayerCategory.BATSMAN, basePrice: 50 },
+        { name: 'KL Rahul', category: PlayerCategory.BATSMAN, basePrice: 45 },
+        { name: 'Shikhar Dhawan', category: PlayerCategory.BATSMAN, basePrice: 40 },
+        { name: 'Shubman Gill', category: PlayerCategory.BATSMAN, basePrice: 35 },
+        { name: 'Ishan Kishan', category: PlayerCategory.BATSMAN, basePrice: 30 },
+        { name: 'Ruturaj Gaikwad', category: PlayerCategory.BATSMAN, basePrice: 30 },
+        { name: 'Yashasvi Jaiswal', category: PlayerCategory.BATSMAN, basePrice: 25 },
+        { name: 'Tilak Varma', category: PlayerCategory.BATSMAN, basePrice: 25 },
+        { name: 'Rinku Singh', category: PlayerCategory.BATSMAN, basePrice: 20 },
+        
+        // Bowlers
+        { name: 'Jasprit Bumrah', category: PlayerCategory.BOWLER, basePrice: 50 },
+        { name: 'Mohammed Shami', category: PlayerCategory.BOWLER, basePrice: 45 },
+        { name: 'Ravindra Jadeja', category: PlayerCategory.BOWLER, basePrice: 40 },
+        { name: 'Yuzvendra Chahal', category: PlayerCategory.BOWLER, basePrice: 35 },
+        { name: 'Kuldeep Yadav', category: PlayerCategory.BOWLER, basePrice: 35 },
+        { name: 'Arshdeep Singh', category: PlayerCategory.BOWLER, basePrice: 30 },
+        { name: 'Mohammed Siraj', category: PlayerCategory.BOWLER, basePrice: 30 },
+        { name: 'Umran Malik', category: PlayerCategory.BOWLER, basePrice: 25 },
+        { name: 'Avesh Khan', category: PlayerCategory.BOWLER, basePrice: 25 },
+        { name: 'Harshal Patel', category: PlayerCategory.BOWLER, basePrice: 20 },
+        
+        // All-rounders
+        { name: 'Hardik Pandya', category: PlayerCategory.ALLROUNDER, basePrice: 50 },
+        { name: 'Ravindra Jadeja', category: PlayerCategory.ALLROUNDER, basePrice: 45 },
+        { name: 'Axar Patel', category: PlayerCategory.ALLROUNDER, basePrice: 40 },
+        { name: 'Washington Sundar', category: PlayerCategory.ALLROUNDER, basePrice: 35 },
+        { name: 'Shivam Dube', category: PlayerCategory.ALLROUNDER, basePrice: 30 },
+        { name: 'Venkatesh Iyer', category: PlayerCategory.ALLROUNDER, basePrice: 30 },
+        { name: 'Rahul Tewatia', category: PlayerCategory.ALLROUNDER, basePrice: 25 },
+        { name: 'Shahbaz Ahmed', category: PlayerCategory.ALLROUNDER, basePrice: 25 },
+        { name: 'Abhishek Sharma', category: PlayerCategory.ALLROUNDER, basePrice: 20 },
+        { name: 'Nitish Rana', category: PlayerCategory.ALLROUNDER, basePrice: 20 },
+        
+        // Wicket Keepers
+        { name: 'MS Dhoni', category: PlayerCategory.WICKETKEEPER, basePrice: 50 },
+        { name: 'Rishabh Pant', category: PlayerCategory.WICKETKEEPER, basePrice: 45 },
+        { name: 'Dinesh Karthik', category: PlayerCategory.WICKETKEEPER, basePrice: 40 },
+        { name: 'Sanju Samson', category: PlayerCategory.WICKETKEEPER, basePrice: 35 },
+        { name: 'Ishan Kishan', category: PlayerCategory.WICKETKEEPER, basePrice: 30 },
+        { name: 'KL Rahul', category: PlayerCategory.WICKETKEEPER, basePrice: 30 },
+        { name: 'Jitesh Sharma', category: PlayerCategory.WICKETKEEPER, basePrice: 25 },
+        { name: 'Dhruv Jurel', category: PlayerCategory.WICKETKEEPER, basePrice: 25 },
+        { name: 'Prabhsimran Singh', category: PlayerCategory.WICKETKEEPER, basePrice: 20 },
+        { name: 'Abishek Porel', category: PlayerCategory.WICKETKEEPER, basePrice: 20 }
     ];
 
-
-    for (const p of players) {
-        await prisma.player.create({
-            data: {
-                name: p.name,
-                category: p.category,
-                basePrice: p.basePrice,
+    const players = [];
+    for (const playerData of playersData) {
+        const player = await prisma.player.upsert({
+            where: {
+                groupId_name: {
+                    groupId: group.id,
+                    name: playerData.name
+                }
+            },
+            update: {},
+            create: {
+                groupId: group.id,
+                name: playerData.name,
+                category: playerData.category,
+                basePrice: playerData.basePrice,
                 status: PlayerStatus.ACTIVE
             }
         });
+        players.push(player);
     }
-    console.log('Dummy players created');
+    console.log(`✅ Created ${players.length} players`);
+
+    // 6. Create SeasonPlayer entries (link players to season)
+    console.log('\n🔗 Creating SeasonPlayer entries...');
+    for (const player of players) {
+        await prisma.seasonPlayer.upsert({
+            where: {
+                seasonId_playerId: {
+                    seasonId: season.id,
+                    playerId: player.id
+                }
+            },
+            update: {},
+            create: {
+                seasonId: season.id,
+                playerId: player.id,
+                status: PlayerStatus.ACTIVE,
+                soldType: null // No direct assignment initially
+            }
+        });
+    }
+    console.log(`✅ Created ${players.length} SeasonPlayer entries`);
+
+    // 7. Create AuctionState for season
+    console.log('\n⏱️  Creating auction state...');
+    await prisma.auctionState.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            id: 1,
+            seasonId: season.id,
+            status: 'READY',
+            currentPrice: 0,
+            version: 0
+        }
+    });
+    console.log('✅ AuctionState created');
+
+    // 8. Create Viewer User
+    console.log('\n👁️  Creating viewer user...');
+    await prisma.user.upsert({
+        where: { email: 'viewer@auction.com' },
+        update: {},
+        create: {
+            email: 'viewer@auction.com',
+            password: await bcrypt.hash('viewer123', 10),
+            name: 'Viewer User',
+            role: Role.VIEWER
+        }
+    });
+    console.log('✅ Viewer created');
+
+    console.log('\n✅ Seed completed successfully!');
+    console.log('\n📋 Summary:');
+    console.log(`   - Group: ${group.name}`);
+    console.log(`   - Season: ${season.name}`);
+    console.log(`   - Teams: ${teams.length}`);
+    console.log(`   - Players: ${players.length}`);
+    console.log(`   - SeasonPlayers: ${players.length}`);
+    console.log('\n🔑 Login Credentials:');
+    console.log('   Admin: admin@auction.com / admin123');
+    console.log('   Owner 1: owner1@auction.com / owner123');
+    console.log('   Owner 2: owner2@auction.com / owner123');
+    console.log('   Owner 3: owner3@auction.com / owner123');
+    console.log('   Owner 4: owner4@auction.com / owner123');
+    console.log('   Viewer: viewer@auction.com / viewer123');
 }
 
 main()
-    .then(async () => {
-        await prisma.$disconnect()
+    .catch((e) => {
+        console.error('❌ Seed error:', e);
+        process.exit(1);
     })
-    .catch(async (e) => {
-        console.error(e)
-        await prisma.$disconnect()
-        process.exit(1)
-    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });

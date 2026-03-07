@@ -58,18 +58,10 @@ export const registerUser = async (email: string, password: string, name: string
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Transaction to ensure team is created if owner
-    if (role === 'OWNER' && teamName) {
-        return await prisma.$transaction(async (tx) => {
-            const user = await tx.user.create({
-                data: { email, password: hashedPassword, name, role }
-            });
-            await tx.team.create({
-                data: { name: teamName, ownerId: user.id }
-            });
-            return user;
-        });
-    }
+    // Note: Team creation now requires seasonId
+    // For registration, we don't create teams automatically
+    // Teams should be created by admin in the admin panel after season is set up
+    // This registration flow is kept for backward compatibility but team creation is skipped
 
     // Normal user create
     const user = await prisma.user.create({

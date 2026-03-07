@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../services/socket.service';
 import { AuthService } from '../../services/auth.service';
+import { ApiService } from '../../services/api.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -24,19 +25,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   customBidAmount: number = 0;
   timerInterval: any = null;
   selectedTeamId: number | null = null;
+  selectedSeasonId: number | null = null;
+  groups: any[] = [];
+  seasons: any[] = [];
 
   private subs: Subscription = new Subscription();
 
   constructor(
     private http: HttpClient,
     private socketService: SocketService,
-    private authService: AuthService
+    private authService: AuthService,
+    private apiService: ApiService
   ) {
     this.authService.user$.subscribe(u => this.user = u);
   }
 
   ngOnInit() {
-    this.fetchState();
+    this.loadGroups();
     this.socketService.connect();
 
     // Log socket connection status
@@ -69,6 +74,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.socketService.listen('AUCTION_UPDATE').subscribe((data: any) => {
         console.log('Auction Update received:', data);
+        // Only process updates for the selected season
+        if (data.seasonId && data.seasonId !== this.selectedSeasonId) {
+          return;
+        }
         if (this.auctionState) {
           // Update auction state immediately for real-time display
           this.auctionState.currentPrice = data.currentPrice;
@@ -192,9 +201,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   pauseAuction() {
-    this.http.post('http://localhost:3000/api/auction/pause', {}, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.pauseAuction(this.selectedSeasonId).subscribe({
       next: () => {
         console.log('Auction paused');
         this.fetchState();
@@ -207,9 +215,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   resumeAuction() {
-    this.http.post('http://localhost:3000/api/auction/resume', {}, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.resumeAuction(this.selectedSeasonId).subscribe({
       next: () => {
         console.log('Auction resumed');
         this.fetchState();
@@ -234,10 +241,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!confirm('Are you sure you want to undo the last bid?')) {
       return;
     }
-
-    this.http.post('http://localhost:3000/api/auction/undo-bid', {}, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.undoLastBid(this.selectedSeasonId).subscribe({
       next: (response: any) => {
         console.log('Bid undone:', response);
         this.fetchState();
@@ -253,10 +258,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!confirm('Are you sure you want to reopen this player for auction? This will revert team changes if player was sold.')) {
       return;
     }
-
-    this.http.post('http://localhost:3000/api/auction/reopen-player', { playerId }, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.reopenPlayer(this.selectedSeasonId, playerId).subscribe({
       next: (response: any) => {
         console.log('Player reopened:', response);
         this.fetchState();
@@ -269,29 +272,65 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   completeAuction() {
-    // Call API to complete auction (mark player as sold/unsold)
-    this.http.post('http://localhost:3000/api/auction/complete', {}, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.completeAuction(this.selectedSeasonId).subscribe({
       next: () => {
         console.log('Auction completed');
-        // Refresh state
         setTimeout(() => {
           this.fetchState();
         }, 500);
       },
       error: (e) => {
         console.error('Failed to complete auction:', e);
-        // Still refresh state
         this.fetchState();
       }
     });
   }
 
+  loadGroups() {
+    this.apiService.getGroups().subscribe({
+      next: (data) => {
+        this.groups = data.groups || data || [];
+        if (this.groups.length > 0) {
+          this.loadSeasons(this.groups[0].id);
+        }
+      },
+      error: (e) => {
+        console.error('Error loading groups:', e);
+      }
+    });
+  }
+
+  loadSeasons(groupId: number) {
+    this.apiService.getSeasonsByGroup(groupId).subscribe({
+      next: (data) => {
+        this.seasons = data.seasons || data || [];
+        if (this.seasons.length > 0 && !this.selectedSeasonId) {
+          // Auto-select first active season, or first season
+          const activeSeason = this.seasons.find((s: any) => s.status === 'ACTIVE') || this.seasons[0];
+          this.selectedSeasonId = activeSeason.id;
+          this.fetchState();
+        } else if (this.selectedSeasonId) {
+          this.fetchState();
+        }
+      },
+      error: (e) => {
+        console.error('Error loading seasons:', e);
+      }
+    });
+  }
+
+  onSeasonChange() {
+    this.fetchState();
+  }
+
   fetchState() {
-    this.http.get<any>('http://localhost:3000/api/auction/state', {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) {
+      console.log('No season selected');
+      return;
+    }
+    
+    this.apiService.getAuctionState(this.selectedSeasonId).subscribe({
       next: (data) => {
         this.auctionState = data.state;
         this.teams = data.teams || [];
@@ -301,6 +340,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         
         // Log teams for debugging
         console.log('Teams loaded:', this.teams.map(t => ({ id: t.id, name: t.name, idType: typeof t.id })));
+        this.startTimerMonitoring();
       },
       error: (e) => {
         console.error('Error fetching state:', e);
@@ -310,9 +350,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   startAuction(playerId: number) {
-    this.http.post('http://localhost:3000/api/auction/start', { playerId }, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.startAuction(this.selectedSeasonId, playerId).subscribe({
       next: () => {
         console.log('Auction started');
         this.fetchState();
@@ -325,19 +364,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   startRandomAuction() {
-    // Check if auction is already live
     if (this.auctionState?.status === 'LIVE') {
       alert('An auction is already in progress. Please wait for it to complete.');
       return;
     }
-
-    this.http.post('http://localhost:3000/api/auction/start-random', {}, {
-      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
-    }).subscribe({
+    if (!this.selectedSeasonId) return;
+    this.apiService.startRandomAuction(this.selectedSeasonId).subscribe({
       next: (response: any) => {
         console.log('Random player selected:', response);
         if (response.playerId) {
-          // Start auction with the selected random player
           this.startAuction(response.playerId);
         } else {
           alert('No active players available for auction.');
@@ -449,6 +484,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.socketService.emit('PLACE_BID', { 
       amount, 
       teamId: selectedTeam.id,
+      seasonId: this.selectedSeasonId,
       isAdminBid: true,
       adminUserId: this.user.id
     });
@@ -530,6 +566,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.socketService.emit('PLACE_BID', { 
       amount, 
       teamId: myTeam.id,
+      seasonId: this.selectedSeasonId,
       isAdminBid: false,
       ownerUserId: this.user.id
     });

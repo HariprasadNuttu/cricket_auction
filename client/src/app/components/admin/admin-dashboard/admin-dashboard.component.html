@@ -1,0 +1,129 @@
+<div class="admin-dashboard">
+  <h2 class="mb-4">Admin Dashboard</h2>
+
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-primary">{{ stats.totalGroups }}</h3>
+          <p class="text-muted mb-0">Groups</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-success">{{ stats.totalSeasons }}</h3>
+          <p class="text-muted mb-0">Seasons</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-info">{{ stats.totalTeams }}</h3>
+          <p class="text-muted mb-0">Teams</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h3 class="text-warning">{{ stats.totalPlayers }}</h3>
+          <p class="text-muted mb-0">Players</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary" (click)="navigateTo('/admin/groups')">
+              <i class="bi bi-people"></i> Manage Groups
+            </button>
+            <button class="btn btn-success" (click)="navigateTo('/admin/seasons')">
+              <i class="bi bi-calendar3"></i> Manage Seasons
+            </button>
+            <button class="btn btn-info" (click)="navigateTo('/admin/teams')">
+              <i class="bi bi-trophy"></i> Manage Teams
+            </button>
+            <button class="btn btn-warning" (click)="navigateTo('/admin/players')">
+              <i class="bi bi-person"></i> Manage Players
+            </button>
+            <button class="btn btn-danger" (click)="navigateTo('/admin/auction-room')">
+              <i class="bi bi-hammer"></i> Auction Room
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Groups -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Recent Groups</h5>
+          <button class="btn btn-sm btn-link" (click)="navigateTo('/admin/groups')">View All</button>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item" *ngFor="let group of recentGroups">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ group.name }}</strong>
+                  <br>
+                  <small class="text-muted">{{ group.description || 'No description' }}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" (click)="navigateTo('/admin/seasons?groupId=' + group.id)">
+                  View Seasons
+                </button>
+              </div>
+            </li>
+            <li class="list-group-item text-center text-muted" *ngIf="recentGroups.length === 0">
+              No groups yet. Create your first group!
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Seasons -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Recent Seasons</h5>
+          <button class="btn btn-sm btn-link" (click)="navigateTo('/admin/seasons')">View All</button>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item" *ngFor="let season of recentSeasons">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ season.name }}</strong>
+                  <br>
+                  <small class="text-muted">Year: {{ season.year }} | Status: {{ season.status }}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-success">
+                  View Details
+                </button>
+              </div>
+            </li>
+            <li class="list-group-item text-center text-muted" *ngIf="recentSeasons.length === 0">
+              No seasons yet. Create a season!
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

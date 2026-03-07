@@ -19,6 +19,12 @@ enum PlayerStatus {
   UNSOLD
 }
 
+enum SoldType {
+  AUCTION
+  DIRECT_ASSIGN
+  TRADE
+}
+
 enum PlayerCategory {
   BATSMAN
   BOWLER
@@ -33,6 +39,16 @@ enum AuctionStatus {
   COMPLETED
 }
 
+enum SeasonStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+// ============================================
+// MULTI-TENANT STRUCTURE
+// ============================================
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -40,8 +56,8 @@ model User {
   name         String
   role         Role     @default(VIEWER)
   
-  // User (Owner) has one Team
-  team         Team?
+  // User (Owner) can own teams in multiple seasons
+  teams        Team[]
   
   refreshToken String?
   createdAt    DateTime @default(now())
@@ -49,65 +65,146 @@ model User {
   
   bidsMade     BidLog[]
   auctionLogs  AuctionLog[] @relation("AuctionLogUser")
+  
+  // Groups created by admin
+  groupsCreated Group[] @relation("GroupCreator")
 }
 
-model Team {
-  id              Int      @id @default(autoincrement())
-  name            String   @unique
-  totalBudget     Int      @default(2000)
-  remainingBudget Int      @default(2000)
-  totalPlayers    Int      @default(0)
+// Cricket Group (Top Level)
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  // Team belongs to one User (Owner)
-  ownerId         Int      @unique
-  owner           User     @relation(fields: [ownerId], references: [id])
+  creator     User     @relation("GroupCreator", fields: [createdById], references: [id])
+  seasons     Season[]
+  players     Player[] // Players belong to group (Option A - Recommended)
   
-  players         Player[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  BidLog          BidLog[]
-  auctionLogs     AuctionLog[] @relation("AuctionLogTeam")
+  @@unique([name])
 }
 
+// Season within a Group
+model Season {
+  id            Int           @id @default(autoincrement())
+  groupId       Int
+  name          String        // e.g., "2026 Season", "Summer Cup 2026"
+  year          Int?
+  status        SeasonStatus  @default(DRAFT)
+  auctionStarted Boolean      @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  group         Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  teams         Team[]
+  seasonPlayers SeasonPlayer[]
+  auctionState  AuctionState?
+  bidLogs       BidLog[]
+  auctionLogs   AuctionLog[]
+}
+
+// Players belong to Group (can be reused across seasons)
 model Player {
   id         Int            @id @default(autoincrement())
+  groupId    Int
   name       String
   category   PlayerCategory
   basePrice  Int            @default(20)
+  country    String?
   status     PlayerStatus   @default(ACTIVE)
-  soldPrice  Int?
-  
-  teamId     Int?
-  team       Team?          @relation(fields: [teamId], references: [id])
   
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
   
-  BidLog     BidLog[]
+  group      Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  seasonPlayers SeasonPlayer[]
+  bidLogs    BidLog[]
   auctionLogs AuctionLog[] @relation("AuctionLogPlayer")
+  
+  @@unique([groupId, name])
+  @@index([groupId])
 }
 
+// Links players to seasons (with season-specific data)
+model SeasonPlayer {
+  id         Int            @id @default(autoincrement())
+  seasonId   Int
+  playerId   Int
+  status     PlayerStatus   @default(ACTIVE)
+  soldPrice  Int?
+  soldType   SoldType?      // AUCTION, DIRECT_ASSIGN, TRADE
+  soldAt     DateTime?      // When player was sold/assigned
+  
+  teamId     Int?
+  team       Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  
+  season     Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  player     Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  
+  @@unique([seasonId, playerId])
+  @@index([seasonId])
+  @@index([playerId])
+  @@index([status])
+  @@index([soldType])
+}
+
+// Teams belong to Season
+model Team {
+  id              Int      @id @default(autoincrement())
+  seasonId        Int
+  name            String
+  ownerId         Int      // User who owns this team
+  totalBudget     Int      @default(2000)
+  remainingBudget Int      @default(2000)
+  totalPlayers    Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  season          Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  owner           User     @relation(fields: [ownerId], references: [id])
+  seasonPlayers   SeasonPlayer[]
+  BidLog          BidLog[]
+  auctionLogs     AuctionLog[] @relation("AuctionLogTeam")
+  
+  @@unique([seasonId, name])
+  @@index([seasonId])
+}
+
+// Auction State (one per season)
 model AuctionState {
-  id              Int           @id @default(1)
+  id              Int           @id @default(autoincrement())
+  seasonId        Int           @unique
   status          AuctionStatus @default(READY)
   timerEndsAt     DateTime?
   currentPrice    Int           @default(0)
-  currentPlayerId Int?
+  currentPlayerId Int?          // References SeasonPlayer.id
   currentBidderId Int? 
   currentBidderTeamId Int? 
   
   version         Int           @default(0)
   updatedAt       DateTime      @updatedAt
+  
+  season          Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  
+  @@index([seasonId])
 }
 
+// Bid Log (tracks all bids)
 model BidLog {
   id        Int      @id @default(autoincrement())
+  seasonId  Int
   amount    Int
   
   teamId    Int
   team      Team     @relation(fields: [teamId], references: [id])
   
-  playerId  Int
+  playerId  Int      // References Player.id (group level)
   player    Player   @relation(fields: [playerId], references: [id])
   
   userId    Int
@@ -115,10 +212,18 @@ model BidLog {
   
   timestamp DateTime @default(now())
   isUndone  Boolean  @default(false)
+  
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  
+  @@index([seasonId])
+  @@index([playerId])
+  @@index([teamId])
 }
 
+// Audit Log
 model AuctionLog {
   id        Int      @id @default(autoincrement())
+  seasonId  Int
   eventType String   // bid_placed, player_sold, timer_paused, timer_resumed, player_skipped, bid_undone, player_reopened
   userId    Int?
   teamId    Int?
@@ -130,4 +235,8 @@ model AuctionLog {
   user      User?    @relation("AuctionLogUser", fields: [userId], references: [id], onDelete: SetNull)
   team      Team?    @relation("AuctionLogTeam", fields: [teamId], references: [id], onDelete: SetNull)
   player    Player?  @relation("AuctionLogPlayer", fields: [playerId], references: [id], onDelete: SetNull)
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  
+  @@index([seasonId])
+  @@index([eventType])
 }

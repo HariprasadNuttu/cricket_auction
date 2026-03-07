@@ -1,0 +1,111 @@
+<div class="reports-container">
+  <h2 class="mb-4">Reports</h2>
+
+  <!-- Report Type Toggle -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="btn-group" role="group">
+        <button type="button" class="btn" [ngClass]="{'btn-primary': reportType === 'sold'}" (click)="switchReportType('sold')">
+          <i class="bi bi-person-check"></i> Sold Players
+        </button>
+        <button type="button" class="btn" [ngClass]="{'btn-primary': reportType === 'team-summary'}" (click)="switchReportType('team-summary')">
+          <i class="bi bi-table"></i> Team Summary
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group and Season Selectors -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Group:</label>
+          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+            <option [value]="null">-- Select Group --</option>
+            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Season:</label>
+          <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
+            <option [value]="null">-- Select Season --</option>
+            <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sold Players Report -->
+  <div class="card" *ngIf="reportType === 'sold' && selectedSeasonId">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Sold Players Report</h5>
+      <small class="text-muted">Total Sold: {{ soldPlayers.length }}</small>
+    </div>
+    <div class="card-body">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Player Name</th>
+            <th>Category</th>
+            <th>Base Price</th>
+            <th>Sold Price</th>
+            <th>Team</th>
+            <th>Sold Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of soldPlayers">
+            <td><strong>{{ player.name }}</strong></td>
+            <td>{{ player.category || player.role }}</td>
+            <td>₹{{ player.basePrice || 0 }}</td>
+            <td class="text-success"><strong>₹{{ player.soldPrice || player.soldPrice || 0 }}</strong></td>
+            <td>{{ player.team?.name || player.teamName || '-' }}</td>
+            <td>
+              <span class="badge bg-info">{{ player.soldType || 'AUCTION' }}</span>
+            </td>
+          </tr>
+          <tr *ngIf="soldPlayers.length === 0">
+            <td colspan="6" class="text-center text-muted">No sold players found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Team Summary Report -->
+  <div class="card" *ngIf="reportType === 'team-summary' && selectedSeasonId">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Team Summary Report</h5>
+      <small class="text-muted">Total Teams: {{ teamSummary.length }}</small>
+    </div>
+    <div class="card-body">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Team Name</th>
+            <th>Players Count</th>
+            <th>Total Spent</th>
+            <th>Average Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let team of teamSummary">
+            <td><strong>{{ team.teamName }}</strong></td>
+            <td>{{ team.playersCount }}</td>
+            <td class="text-danger"><strong>₹{{ team.totalSpent }}</strong></td>
+            <td>₹{{ team.averagePrice.toFixed(2) }}</td>
+          </tr>
+          <tr *ngIf="teamSummary.length === 0">
+            <td colspan="4" class="text-center text-muted">No team data available.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

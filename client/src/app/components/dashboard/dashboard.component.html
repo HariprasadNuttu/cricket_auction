@@ -1,4 +1,19 @@
 <div class="container mt-4">
+    <!-- Season Selector -->
+    <div class="row mb-3" *ngIf="groups.length > 0">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <label class="form-label">Select Season:</label>
+                    <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()">
+                        <option [value]="null">-- Select Season --</option>
+                        <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Admin Actions - Top Section -->
         <div class="col-12 mb-3" *ngIf="user?.role === 'ADMIN'">

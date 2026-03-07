@@ -1,0 +1,396 @@
+import { Request, Response } from 'express';
+import prisma from '../utils/prisma';
+import { parse } from 'csv-parse';
+import multer from 'multer';
+
+interface AuthRequest extends Request {
+    user?: any;
+}
+
+// Configure multer for file uploads
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// Middleware for file upload
+export const uploadMiddleware = upload.single('file');
+
+// Add player to group
+export const addPlayerToGroup = async (req: AuthRequest, res: Response) => {
+    try {
+        const { groupId } = req.params;
+        const { name, category, basePrice, country } = req.body;
+        const groupIdNum = parseInt(groupId);
+
+        if (!name || !category || !basePrice) {
+            return res.status(400).json({ 
+                error: 'Name, category, and basePrice are required' 
+            });
+        }
+
+        // Verify group exists
+        const group = await prisma.group.findUnique({
+            where: { id: groupIdNum }
+        });
+
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+        const player = await prisma.player.create({
+            data: {
+                groupId: groupIdNum,
+                name,
+                category,
+                basePrice: parseInt(basePrice),
+                country: country || null,
+                status: 'ACTIVE'
+            }
+        });
+
+        res.status(201).json(player);
+    } catch (error: any) {
+        console.error('Error adding player:', error);
+        if (error.code === 'P2002') {
+            return res.status(400).json({ 
+                error: 'Player with this name already exists in this group' 
+            });
+        }
+        res.status(500).json({ error: 'Failed to add player' });
+    }
+};
+
+// Upload players via CSV
+export const uploadPlayersCSV = async (req: AuthRequest, res: Response) => {
+    try {
+        const { groupId } = req.params;
+        const groupIdNum = parseInt(groupId);
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'CSV file is required' });
+        }
+
+        // Verify group exists
+        const group = await prisma.group.findUnique({
+            where: { id: groupIdNum }
+        });
+
+        if (!group) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+        // Parse CSV
+        const csvContent = req.file.buffer.toString('utf-8');
+        const records = parse(csvContent, {
+            columns: true,
+            skip_empty_lines: true,
+            trim: true,
+            bom: true // Handle BOM for Excel-generated CSVs
+        }) as unknown as any[];
+
+        const results = {
+            success: [] as any[],
+            errors: [] as any[]
+        };
+
+        for (const record of records) {
+            try {
+                const { name, category, basePrice, country } = record;
+
+                if (!name || !category || !basePrice) {
+                    results.errors.push({
+                        row: record,
+                        error: 'Missing required fields: name, category, basePrice'
+                    });
+                    continue;
+                }
+
+                const player = await prisma.player.create({
+                    data: {
+                        groupId: groupIdNum,
+                        name: name.trim(),
+                        category: category.toUpperCase(),
+                        basePrice: parseInt(basePrice),
+                        country: country?.trim() || null,
+                        status: 'ACTIVE'
+                    }
+                });
+
+                results.success.push(player);
+            } catch (error: any) {
+                results.errors.push({
+                    row: record,
+                    error: error.message
+                });
+            }
+        }
+
+        res.json({
+            message: `Processed ${records.length} rows`,
+            success: results.success.length,
+            errors: results.errors.length,
+            details: results
+        });
+    } catch (error: any) {
+        console.error('Error uploading CSV:', error);
+        res.status(500).json({ error: 'Failed to upload CSV' });
+    }
+};
+
+// Get players in group
+export const getPlayersByGroup = async (req: AuthRequest, res: Response) => {
+    try {
+        const { groupId } = req.params;
+        const groupIdNum = parseInt(groupId);
+
+        const players = await prisma.player.findMany({
+            where: { groupId: groupIdNum },
+            orderBy: { name: 'asc' }
+        });
+
+        res.json(players);
+    } catch (error) {
+        console.error('Error fetching players:', error);
+        res.status(500).json({ error: 'Failed to fetch players' });
+    }
+};
+
+// Update player
+export const updatePlayer = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { name, category, basePrice, country, status } = req.body;
+        const playerId = parseInt(id);
+
+        const player = await prisma.player.update({
+            where: { id: playerId },
+            data: {
+                name,
+                category,
+                basePrice: basePrice ? parseInt(basePrice) : undefined,
+                country,
+                status
+            }
+        });
+
+        res.json(player);
+    } catch (error: any) {
+        console.error('Error updating player:', error);
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+        res.status(500).json({ error: 'Failed to update player' });
+    }
+};
+
+// Delete player
+export const deletePlayer = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const playerId = parseInt(id);
+
+        // Check if player is used in any seasons
+        const seasonPlayers = await prisma.seasonPlayer.findMany({
+            where: { playerId: playerId }
+        });
+
+        if (seasonPlayers.length > 0) {
+            return res.status(400).json({ 
+                error: 'Cannot delete player that is used in seasons. Remove from seasons first.' 
+            });
+        }
+
+        await prisma.player.delete({
+            where: { id: playerId }
+        });
+
+        res.json({ message: 'Player deleted successfully' });
+    } catch (error: any) {
+        console.error('Error deleting player:', error);
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Player not found' });
+        }
+        res.status(500).json({ error: 'Failed to delete player' });
+    }
+};
+
+// Add players to season (from group players)
+export const addPlayersToSeason = async (req: AuthRequest, res: Response) => {
+    try {
+        const { seasonId } = req.params;
+        const { playerIds } = req.body; // Array of player IDs
+        const seasonIdNum = parseInt(seasonId);
+
+        if (!Array.isArray(playerIds) || playerIds.length === 0) {
+            return res.status(400).json({ error: 'playerIds array is required' });
+        }
+
+        // Verify season exists and get group
+        const season = await prisma.season.findUnique({
+            where: { id: seasonIdNum },
+            include: { group: true }
+        });
+
+        if (!season) {
+            return res.status(404).json({ error: 'Season not found' });
+        }
+
+        const results = {
+            success: [] as any[],
+            errors: [] as any[]
+        };
+
+        for (const playerId of playerIds) {
+            try {
+                // Verify player belongs to the group
+                const player = await prisma.player.findUnique({
+                    where: { id: playerId }
+                });
+
+                if (!player) {
+                    results.errors.push({
+                        playerId,
+                        error: 'Player not found'
+                    });
+                    continue;
+                }
+
+                if (player.groupId !== season.groupId) {
+                    results.errors.push({
+                        playerId,
+                        error: 'Player does not belong to this group'
+                    });
+                    continue;
+                }
+
+                // Create SeasonPlayer entry
+                const seasonPlayer = await prisma.seasonPlayer.create({
+                    data: {
+                        seasonId: seasonIdNum,
+                        playerId: playerId,
+                        status: 'ACTIVE'
+                    },
+                    include: {
+                        player: true
+                    }
+                });
+
+                results.success.push(seasonPlayer);
+            } catch (error: any) {
+                if (error.code === 'P2002') {
+                    results.errors.push({
+                        playerId,
+                        error: 'Player already added to season'
+                    });
+                } else {
+                    results.errors.push({
+                        playerId,
+                        error: error.message
+                    });
+                }
+            }
+        }
+
+        res.json({
+            message: `Processed ${playerIds.length} players`,
+            success: results.success.length,
+            errors: results.errors.length,
+            details: results
+        });
+    } catch (error) {
+        console.error('Error adding players to season:', error);
+        res.status(500).json({ error: 'Failed to add players to season' });
+    }
+};
+
+// Get players in season
+export const getPlayersBySeason = async (req: AuthRequest, res: Response) => {
+    try {
+        const { seasonId } = req.params;
+        const seasonIdNum = parseInt(seasonId);
+
+        const seasonPlayers = await prisma.seasonPlayer.findMany({
+            where: { seasonId: seasonIdNum },
+            include: {
+                player: true,
+                team: {
+                    select: { id: true, name: true }
+                }
+            },
+            orderBy: { id: 'asc' }
+        });
+
+        res.json(seasonPlayers);
+    } catch (error) {
+        console.error('Error fetching season players:', error);
+        res.status(500).json({ error: 'Failed to fetch season players' });
+    }
+};
+
+// Update season player
+export const updateSeasonPlayer = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status, soldPrice, teamId } = req.body;
+        const seasonPlayerId = parseInt(id);
+
+        const seasonPlayer = await prisma.seasonPlayer.update({
+            where: { id: seasonPlayerId },
+            data: {
+                status,
+                soldPrice: soldPrice ? parseInt(soldPrice) : undefined,
+                teamId: teamId ? parseInt(teamId) : undefined
+            },
+            include: {
+                player: true,
+                team: {
+                    select: { id: true, name: true }
+                }
+            }
+        });
+
+        res.json(seasonPlayer);
+    } catch (error: any) {
+        console.error('Error updating season player:', error);
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Season player not found' });
+        }
+        res.status(500).json({ error: 'Failed to update season player' });
+    }
+};
+
+// Remove player from season
+export const removePlayerFromSeason = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id } = req.params;
+        const seasonPlayerId = parseInt(id);
+
+        // Check if player is sold
+        const seasonPlayer = await prisma.seasonPlayer.findUnique({
+            where: { id: seasonPlayerId }
+        });
+
+        if (!seasonPlayer) {
+            return res.status(404).json({ error: 'Season player not found' });
+        }
+
+        if (seasonPlayer.status === 'SOLD') {
+            return res.status(400).json({ 
+                error: 'Cannot remove sold player from season' 
+            });
+        }
+
+        await prisma.seasonPlayer.delete({
+            where: { id: seasonPlayerId }
+        });
+
+        res.json({ message: 'Player removed from season successfully' });
+    } catch (error: any) {
+        console.error('Error removing player from season:', error);
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Season player not found' });
+        }
+        res.status(500).json({ error: 'Failed to remove player from season' });
+    }
+};

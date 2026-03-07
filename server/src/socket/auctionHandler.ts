@@ -20,6 +20,7 @@ function getMinimumIncrement(currentPrice: number): number {
 
 export const registerAuctionHandlers = (io: Server, socket: Socket) => {
     const onPlaceBid = async (payload: { 
+        seasonId: number;
         amount: number; 
         teamId: number; 
         isAdminBid?: boolean; 
@@ -27,8 +28,18 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
         ownerUserId?: number;
     }) => {
         try {
-            // 1. Validate Auction State
-            const auctionState = await prisma.auctionState.findUnique({ where: { id: 1 } });
+            const { seasonId, amount, teamId } = payload;
+
+            if (!seasonId) {
+                socket.emit('ERROR', { message: 'Season ID is required' });
+                return;
+            }
+
+            // 1. Validate Auction State (for this season)
+            const auctionState = await prisma.auctionState.findUnique({ 
+                where: { seasonId: seasonId } 
+            });
+
             if (!auctionState || auctionState.status !== 'LIVE') {
                 socket.emit('ERROR', { 
                     message: auctionState?.status === 'PAUSED' 
@@ -55,7 +66,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 2. Validate Bid Amount
-            if (payload.amount <= currentPrice) {
+            if (amount <= currentPrice) {
                 socket.emit('ERROR', { 
                     message: `Bid must be higher than current price (${currentPrice})` 
                 });
@@ -64,7 +75,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
 
             // 2a. Validate Bid Increment (minimum increment rules)
             const minIncrement = getMinimumIncrement(currentPrice);
-            const actualIncrement = payload.amount - currentPrice;
+            const actualIncrement = amount - currentPrice;
             if (actualIncrement < minIncrement) {
                 socket.emit('ERROR', { 
                     message: `Minimum bid increment is ${minIncrement}. Your bid must be at least ${currentPrice + minIncrement}` 
@@ -73,16 +84,28 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 3. Validate Team Budget
-            const team = await prisma.team.findUnique({ where: { id: payload.teamId } });
+            const team = await prisma.team.findUnique({ 
+                where: { id: teamId },
+                include: {
+                    season: true
+                }
+            });
+
             if (!team) {
                 socket.emit('ERROR', { message: 'Team not found' });
                 return;
             }
+
+            // Verify team belongs to this season
+            if (team.seasonId !== seasonId) {
+                socket.emit('ERROR', { message: 'Team does not belong to this season' });
+                return;
+            }
             
             // Budget validation
-            if (team.remainingBudget < payload.amount) {
+            if (team.remainingBudget < amount) {
                 socket.emit('ERROR', { 
-                    message: `Insufficient budget. Remaining: ${team.remainingBudget}, Required: ${payload.amount}` 
+                    message: `Insufficient budget. Remaining: ${team.remainingBudget}, Required: ${amount}` 
                 });
                 return;
             }
@@ -90,7 +113,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             // 3a. Validate minimum slot budget (prevent teams from getting stuck)
             const remainingSlots = 15 - team.totalPlayers;
             const minimumRequiredBudget = remainingSlots * 20; // Base price per player
-            if (team.remainingBudget - payload.amount < minimumRequiredBudget && remainingSlots > 0) {
+            if (team.remainingBudget - amount < minimumRequiredBudget && remainingSlots > 0) {
                 socket.emit('ERROR', { 
                     message: `Cannot bid: Team needs at least ${minimumRequiredBudget} for remaining ${remainingSlots} player slot(s)` 
                 });
@@ -98,7 +121,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 3b. Rate Limiting: Prevent spam bidding
-            const lastBid = lastBidTime.get(payload.teamId);
+            const lastBid = lastBidTime.get(teamId);
             const now = Date.now();
             if (lastBid && (now - lastBid) < RATE_LIMIT_MS) {
                 socket.emit('ERROR', { 
@@ -108,7 +131,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 3c. Duplicate Bid Prevention
-            const bidKey = `${payload.teamId}-${payload.amount}-${auctionState.currentPlayerId}`;
+            const bidKey = `${seasonId}-${teamId}-${amount}-${auctionState.currentPlayerId}`;
             const lastDuplicateBid = recentBids.get(bidKey);
             if (lastDuplicateBid && (now - lastDuplicateBid) < DUPLICATE_WINDOW_MS) {
                 socket.emit('ERROR', { 
@@ -118,7 +141,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // Update rate limiting and duplicate prevention
-            lastBidTime.set(payload.teamId, now);
+            lastBidTime.set(teamId, now);
             recentBids.set(bidKey, now);
             
             // Clean up old entries (prevent memory leak)
@@ -131,8 +154,18 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 }
             }
 
-            // 4. Determine userId for bid log
-            // Priority: ownerUserId (if owner bid) > adminUserId (if admin bid) > team ownerId
+            // 4. Get season player to get playerId
+            const seasonPlayer = await prisma.seasonPlayer.findUnique({
+                where: { id: auctionState.currentPlayerId! },
+                select: { playerId: true }
+            });
+
+            if (!seasonPlayer) {
+                socket.emit('ERROR', { message: 'Current player not found' });
+                return;
+            }
+
+            // 5. Determine userId for bid log
             let userIdForLog = team.ownerId;
             
             // Check if it's an owner bid
@@ -155,13 +188,12 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 }
             }
 
-            // 5. Atomic Bid Update with Race Condition Protection
-            // Use optimistic locking with version check to prevent race conditions
+            // 6. Atomic Bid Update with Race Condition Protection
             const newTimerEndsAt = new Date(currentTime.getTime() + 60 * 1000); // Reset to 1 minute
             
             // Get current version for optimistic locking
             const currentState = await prisma.auctionState.findUnique({ 
-                where: { id: 1 },
+                where: { seasonId: seasonId },
                 select: { version: true, currentPrice: true }
             });
 
@@ -171,9 +203,9 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // Double-check price hasn't changed (race condition protection)
-            if (payload.amount <= currentState.currentPrice) {
+            if (amount <= currentState.currentPrice) {
                 socket.emit('ERROR', { 
-                    message: `Bid amount ${payload.amount} must be higher than current price ${currentState.currentPrice}` 
+                    message: `Bid amount ${amount} must be higher than current price ${currentState.currentPrice}` 
                 });
                 return;
             }
@@ -181,12 +213,12 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             // Atomic update with version check
             const updatedState = await prisma.auctionState.updateMany({
                 where: { 
-                    id: 1,
+                    seasonId: seasonId,
                     version: currentState.version // Only update if version matches
                 },
                 data: {
-                    currentPrice: payload.amount,
-                    currentBidderTeamId: payload.teamId,
+                    currentPrice: amount,
+                    currentBidderTeamId: teamId,
                     timerEndsAt: newTimerEndsAt,
                     version: { increment: 1 }
                 }
@@ -204,32 +236,37 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 // Log bid - userId will be admin's ID if admin bid, otherwise team owner's ID
                 prisma.bidLog.create({
                     data: {
-                        amount: payload.amount,
-                        teamId: payload.teamId,
-                        playerId: auctionState.currentPlayerId!,
+                        seasonId: seasonId,
+                        amount: amount,
+                        teamId: teamId,
+                        playerId: seasonPlayer.playerId,
                         userId: userIdForLog
                     }
                 }),
                 // Audit log
                 prisma.auctionLog.create({
                     data: {
+                        seasonId: seasonId,
                         eventType: 'bid_placed',
                         userId: userIdForLog,
-                        teamId: payload.teamId,
-                        playerId: auctionState.currentPlayerId!,
-                        amount: payload.amount,
+                        teamId: teamId,
+                        playerId: seasonPlayer.playerId,
+                        amount: amount,
                         details: JSON.stringify({
                             previousPrice: currentState.currentPrice,
-                            newPrice: payload.amount,
+                            newPrice: amount,
                             isAdminBid: payload.isAdminBid || false
                         })
                     }
                 })
             ]);
 
-            // 6. Get updated bid history for current player
+            // 7. Get updated bid history for current player
             const bidHistory = await prisma.bidLog.findMany({
-                where: { playerId: auctionState.currentPlayerId! },
+                where: { 
+                    seasonId: seasonId,
+                    playerId: seasonPlayer.playerId 
+                },
                 include: {
                     team: {
                         select: { id: true, name: true }
@@ -242,16 +279,17 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 take: 20
             });
 
-            // 7. Broadcast Update
+            // 8. Broadcast Update (scoped to season)
             io.emit('AUCTION_UPDATE', {
-                currentPrice: payload.amount,
-                currentBidderTeamId: payload.teamId,
+                seasonId: seasonId,
+                currentPrice: amount,
+                currentBidderTeamId: teamId,
                 timerEndsAt: newTimerEndsAt,
                 status: 'LIVE',
                 bidHistory: bidHistory
             });
 
-            console.log(`Bid placed: ${payload.amount} by team ${team.name}${payload.isAdminBid ? ' (via admin)' : ''}`);
+            console.log(`Bid placed: ${amount} by team ${team.name} in season ${seasonId}${payload.isAdminBid ? ' (via admin)' : ''}`);
 
         } catch (error: any) {
             console.error('Bid placement error:', error);

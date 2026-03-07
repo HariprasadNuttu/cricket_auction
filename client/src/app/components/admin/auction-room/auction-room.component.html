@@ -1,0 +1,211 @@
+<div class="auction-room-container">
+  <h2 class="mb-4">Auction Room</h2>
+
+  <!-- Group and Season Selectors -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Group:</label>
+          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+            <option [value]="null">-- Select Group --</option>
+            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Season:</label>
+          <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
+            <option [value]="null">-- Select Season --</option>
+            <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Controls -->
+  <div class="card mb-4" *ngIf="selectedSeasonId && user?.role === 'ADMIN'">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+      <span>Admin Controls</span>
+      <button class="btn btn-light btn-sm" 
+        [disabled]="auctionState?.status === 'LIVE' || getActivePlayersCount() === 0"
+        (click)="startRandomAuction()">
+        Start Next Random Player
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Quick Stats</h6>
+          <div class="d-flex gap-3">
+            <span class="badge bg-primary">Active: {{ getActivePlayersCount() }}</span>
+            <span class="badge bg-success">Sold: {{ getSoldPlayersCount() }}</span>
+            <span class="badge bg-secondary">Unsold: {{ getUnsoldPlayersCount() }}</span>
+          </div>
+        </div>
+        <div class="col-md-6 text-end">
+          <div class="d-flex gap-2 justify-content-end">
+            <button class="btn btn-sm btn-warning" (click)="pauseAuction()" [disabled]="auctionState?.status !== 'LIVE'">
+              <i class="bi bi-pause"></i> Pause
+            </button>
+            <button class="btn btn-sm btn-success" (click)="resumeAuction()" [disabled]="auctionState?.status !== 'PAUSED'">
+              <i class="bi bi-play"></i> Resume
+            </button>
+            <button class="btn btn-sm btn-primary" (click)="completeAuction()" [disabled]="auctionState?.status !== 'LIVE'">
+              <i class="bi bi-check"></i> Complete
+            </button>
+            <button class="btn btn-sm btn-danger" (click)="undoLastBid()" [disabled]="auctionState?.status !== 'LIVE'">
+              <i class="bi bi-arrow-counterclockwise"></i> Undo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Player Card -->
+  <div class="row mb-4" *ngIf="selectedSeasonId">
+    <div class="col-md-4">
+      <div class="card" *ngIf="currentPlayer; else noPlayer">
+        <div class="card-header bg-primary text-white">
+          Current Player
+        </div>
+        <div class="card-body text-center">
+          <h3>{{ currentPlayer?.name }}</h3>
+          <p class="badge bg-secondary">{{ currentPlayer?.category }}</p>
+          <h4>Base Price: {{ currentPlayer?.basePrice }}</h4>
+          <hr>
+          <h2 class="text-success">Current Bid: {{ auctionState?.currentPrice || 0 }}</h2>
+          <p *ngIf="auctionState?.currentBidderTeamId" class="mt-2">
+            <span class="badge bg-info">Current Bidder: {{ getTeamNameById(auctionState.currentBidderTeamId) }}</span>
+          </p>
+          <p *ngIf="auctionState?.status === 'PAUSED'" class="mt-2">
+            <span class="badge bg-warning text-dark">Auction Paused</span>
+          </p>
+          <h3 class="mt-3">{{ timer }}</h3>
+        </div>
+      </div>
+      <ng-template #noPlayer>
+        <div class="card">
+          <div class="card-body text-center text-muted">
+            <p>No player currently on auction</p>
+            <p class="small">Select a season and start auction</p>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Bidding Section -->
+    <div class="col-md-8" *ngIf="auctionState?.status === 'LIVE'">
+      <div class="card">
+        <div class="card-header">
+          <h5>Place Bid</h5>
+        </div>
+        <div class="card-body">
+          <!-- Quick Bid Buttons -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <h6>Quick Bids:</h6>
+              <div class="d-flex gap-2 flex-wrap">
+                <button *ngFor="let team of teams" 
+                  class="btn btn-outline-primary"
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 100)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 100, team.id)">
+                  {{ team.name }}: +₹100
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Custom Bid Amount -->
+          <div class="row">
+            <div class="col-md-6">
+              <label class="form-label">Custom Bid Amount:</label>
+              <div class="input-group">
+                <input type="number" class="form-control" [(ngModel)]="customBidAmount" min="0" placeholder="Enter amount">
+                <button class="btn btn-primary" (click)="placeBidForTeam(customBidAmount)" [disabled]="!customBidAmount || customBidAmount <= auctionState?.currentPrice">
+                  Place Bid
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teams Budget Table -->
+  <div class="card mb-4" *ngIf="selectedSeasonId">
+    <div class="card-header">
+      <h5>Teams Budget</h5>
+    </div>
+    <div class="card-body">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Team</th>
+            <th>Budget</th>
+            <th>Remaining</th>
+            <th>Players</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let team of teams">
+            <td><strong>{{ team.name }}</strong></td>
+            <td>₹{{ team.budget || 0 }}</td>
+            <td [ngClass]="{'text-danger': team.remainingBudget < 1000, 'text-success': team.remainingBudget >= 5000}">
+              ₹{{ team.remainingBudget || 0 }}
+            </td>
+            <td>{{ team.playerCount || 0 }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Players List -->
+  <div class="card" *ngIf="selectedSeasonId">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Players</h5>
+      <small class="text-muted">Total: {{ players.length }}</small>
+    </div>
+    <div class="card-body">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Team</th>
+            <th>Sold Price</th>
+            <th *ngIf="user?.role === 'ADMIN'">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of players">
+            <td><strong>{{ player.name }}</strong></td>
+            <td>{{ player.category || player.role }}</td>
+            <td>
+              <span class="badge" [ngClass]="{
+                'bg-success': player.status === 'SOLD',
+                'bg-primary': player.status === 'ACTIVE',
+                'bg-secondary': player.status === 'UNSOLD'
+              }">{{ player.status }}</span>
+            </td>
+            <td>{{ player.team?.name || player.teamName || '-' }}</td>
+            <td>₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
+            <td *ngIf="user?.role === 'ADMIN'">
+              <button class="btn btn-sm btn-warning" (click)="reopenPlayer(player.id)" [disabled]="player.status !== 'SOLD'">
+                <i class="bi bi-arrow-counterclockwise"></i> Reopen
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

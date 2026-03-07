@@ -3,6 +3,10 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
 import auctionRoutes from './routes/auction.routes';
+import groupRoutes from './routes/group.routes';
+import seasonRoutes from './routes/season.routes';
+import playerRoutes from './routes/player.routes';
+import directAssignRoutes from './routes/directAssign.routes';
 
 const app = express();
 
@@ -15,6 +19,10 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auction', auctionRoutes);
+app.use('/api', groupRoutes);
+app.use('/api', seasonRoutes);
+app.use('/api', playerRoutes);
+app.use('/api', directAssignRoutes);
 
 app.get('/health', (req, res) => {
     res.send('OK');

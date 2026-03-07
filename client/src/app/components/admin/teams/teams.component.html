@@ -1,0 +1,163 @@
+<div class="teams-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Teams Management</h2>
+    <button class="btn btn-primary" (click)="openCreateModal()" [disabled]="!selectedSeasonId">
+      <i class="bi bi-plus-circle"></i> Create Team
+    </button>
+  </div>
+
+  <!-- Group and Season Selectors -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Group:</label>
+          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+            <option [value]="null">-- Select Group --</option>
+            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body">
+          <label class="form-label">Select Season:</label>
+          <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
+            <option [value]="null">-- Select Season --</option>
+            <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teams Table -->
+  <div class="card" *ngIf="selectedSeasonId">
+    <div class="card-body">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Team Name</th>
+            <th>Owner</th>
+            <th>Budget</th>
+            <th>Remaining Budget</th>
+            <th>Players</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let team of teams">
+            <td><strong>{{ team.name }}</strong></td>
+            <td>{{ team.owner?.name || team.ownerName || '-' }}</td>
+            <td>₹{{ team.budget || 0 }}</td>
+            <td>₹{{ team.remainingBudget || team.budget || 0 }}</td>
+            <td>{{ team.playerCount || 0 }}</td>
+            <td>
+              <button class="btn btn-sm btn-info me-2" (click)="openAssignOwnerModal(team)">
+                <i class="bi bi-person-check"></i> Assign Owner
+              </button>
+              <button class="btn btn-sm btn-warning me-2" (click)="openEditModal(team)">
+                <i class="bi bi-pencil"></i> Edit
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteTeam(team.id)">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="teams.length === 0">
+            <td colspan="6" class="text-center text-muted">No teams found. Create your first team!</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Team Modal -->
+  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Team</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Team Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Initial Budget</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.budget" name="budget" min="0">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createTeam()">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Edit Team Modal -->
+  <div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Team</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Team Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Initial Budget</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.budget" name="budget" min="0">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="updateTeam()">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Assign Owner Modal -->
+  <div class="modal fade" [class.show]="showAssignOwnerModal" [style.display]="showAssignOwnerModal ? 'block' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Assign Owner to {{ selectedTeam?.name }}</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Select Owner:</label>
+              <select class="form-select" [(ngModel)]="assignOwnerData.ownerId">
+                <option [value]="null">-- Select Owner --</option>
+                <!-- TODO: Load owners from API -->
+                <option *ngFor="let owner of owners" [value]="owner.id">{{ owner.name }} ({{ owner.email }})</option>
+              </select>
+              <small class="form-text text-muted">Note: Owners must be registered users with OWNER role.</small>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="assignOwner()">Assign</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showAssignOwnerModal" [style.display]="showAssignOwnerModal ? 'block' : 'none'" (click)="closeModals()"></div>
+</div>
