@@ -49,6 +49,9 @@ export class AuthService {
     localStorage.setItem(this.accessTokenKey, authResult.accessToken);
     localStorage.setItem('user', JSON.stringify(authResult.user));
     this.userSubject.next(authResult.user);
+    
+    // Update socket token if socket service is available
+    // Note: We use a simple approach - socket service reads from localStorage
   }
 
   logout() {

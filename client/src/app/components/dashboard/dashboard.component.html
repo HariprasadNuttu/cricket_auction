@@ -46,12 +46,51 @@
                     <p *ngIf="auctionState?.currentBidderTeamId" class="mt-2">
                         <span class="badge bg-info">Current Bidder: {{ getTeamName(auctionState.currentBidderTeamId) }}</span>
                     </p>
-                    <p *ngIf="auctionState?.timerEndsAt" class="mt-2">
+                    <p *ngIf="auctionState?.status === 'PAUSED'" class="mt-2">
+                        <span class="badge bg-warning text-dark">Auction Paused</span>
+                    </p>
+                    <p *ngIf="auctionState?.timerEndsAt && auctionState?.status === 'LIVE'" class="mt-2">
                         <strong>Timer:</strong> <span class="badge bg-warning text-dark">{{ timer }}</span>
                     </p>
-                    <p *ngIf="auctionState?.timerEndsAt" class="mt-1">
+                    <p *ngIf="auctionState?.timerEndsAt && auctionState?.status === 'LIVE'" class="mt-1">
                         <small class="text-muted">Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}</small>
                     </p>
+                    
+                    <!-- Admin Controls: Pause/Resume/Sold/Undo -->
+                    <div class="mt-3" *ngIf="user?.role === 'ADMIN' && auctionState">
+                        <div class="btn-group" role="group" *ngIf="auctionState.status === 'LIVE'">
+                            <button class="btn btn-warning btn-sm" (click)="pauseAuction()">
+                                ⏸ Pause
+                            </button>
+                            <button class="btn btn-success btn-sm" 
+                                [disabled]="!auctionState.currentBidderTeamId"
+                                (click)="sellPlayer()">
+                                ✅ Sold
+                            </button>
+                            <button class="btn btn-secondary btn-sm" 
+                                [disabled]="!auctionState.currentBidderTeamId"
+                                (click)="undoLastBid()"
+                                title="Undo last bid">
+                                ↶ Undo
+                            </button>
+                        </div>
+                        <div class="btn-group" role="group" *ngIf="auctionState.status === 'PAUSED'">
+                            <button class="btn btn-primary btn-sm" (click)="resumeAuction()">
+                                ▶ Resume
+                            </button>
+                            <button class="btn btn-success btn-sm" 
+                                [disabled]="!auctionState.currentBidderTeamId"
+                                (click)="sellPlayer()">
+                                ✅ Sold
+                            </button>
+                            <button class="btn btn-secondary btn-sm" 
+                                [disabled]="!auctionState.currentBidderTeamId"
+                                (click)="undoLastBid()"
+                                title="Undo last bid">
+                                ↶ Undo
+                            </button>
+                        </div>
+                    </div>
                     
                     <!-- Bid History -->
                     <div class="mt-3" *ngIf="bidHistory && bidHistory.length > 0">
@@ -71,16 +110,32 @@
                     </div>
                 </div>
                 
-                <!-- Owner View - No Bid Controls -->
-                <div class="card-footer" *ngIf="user?.role === 'OWNER'">
-                    <div class="alert alert-info mb-0">
-                        <small>Only admin can place bids on behalf of teams.</small>
+                <!-- Owner Bid Controls -->
+                <div class="card-footer" *ngIf="user?.role === 'OWNER' && auctionState?.status === 'LIVE'">
+                    <h6 class="mb-3">Place Your Bid</h6>
+                    <button class="btn btn-success w-100 mb-2" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE'"
+                        (click)="placeBidAsOwner(auctionState.currentPrice + 10)">
+                        Bid +10
+                    </button>
+                    <div class="input-group mb-2">
+                        <input type="number" 
+                            class="form-control" 
+                            [(ngModel)]="customBidAmount" 
+                            [min]="(auctionState?.currentPrice || 0) + 1"
+                            placeholder="Enter bid amount">
+                        <button class="btn btn-primary" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)"
+                            (click)="placeBidAsOwner(customBidAmount)">Bid</button>
                     </div>
+                    <small class="text-muted d-block" *ngIf="auctionState">
+                        Minimum bid: {{ auctionState.currentPrice + 1 }}
+                    </small>
                 </div>
             </div>
             
             <!-- Team Bid Tiles - Below Current Player Card -->
-            <div class="row mt-3" *ngIf="user?.role === 'ADMIN' && auctionState?.status === 'LIVE'">
+            <div class="row mt-3" *ngIf="user?.role === 'ADMIN' && (auctionState?.status === 'LIVE' || auctionState?.status === 'PAUSED')">
                 <div class="col-md-6 col-lg-3 mb-3" *ngFor="let team of teams">
                     <div class="card h-100" [class.border-success]="auctionState?.currentBidderTeamId === team.id">
                         <div class="card-header bg-light">
@@ -173,6 +228,7 @@
                                     <th>Status</th>
                                     <th>Sold Price</th>
                                     <th>Team</th>
+                                    <th *ngIf="user?.role === 'ADMIN'">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -194,6 +250,13 @@
                                     </td>
                                     <td>{{ p.soldPrice || '-' }}</td>
                                     <td>{{ getTeamNameById(p.teamId) || '-' }}</td>
+                                    <td *ngIf="user?.role === 'ADMIN' && (p.status === 'SOLD' || p.status === 'UNSOLD')">
+                                        <button class="btn btn-sm btn-outline-info" 
+                                            (click)="reopenPlayer(p.id)"
+                                            title="Reopen player for re-auction">
+                                            🔄 Reopen
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

@@ -44,13 +44,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (socket) {
       socket.on('connect', () => {
         console.log('Socket connected:', socket.id);
+        // Sync state on reconnect
+        this.fetchState();
       });
+      
       socket.on('disconnect', () => {
         console.log('Socket disconnected');
       });
+      
+      socket.on('reconnect', (attemptNumber: number) => {
+        console.log('Socket reconnected after', attemptNumber, 'attempts');
+        // Sync state after reconnection
+        setTimeout(() => {
+          this.fetchState();
+        }, 500);
+      });
+      
       socket.on('connect_error', (error: any) => {
         console.error('Socket connection error:', error);
-        alert('Failed to connect to auction server. Please refresh the page.');
+        // Don't alert on every error, just log
       });
     }
 
@@ -66,6 +78,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             : null;
           this.auctionState.currentBidderTeamId = data.currentBidderTeamId;
           
+          // Update status if provided
+          if (data.status) {
+            this.auctionState.status = data.status;
+          }
+          
           // Update bid history if provided
           if (data.bidHistory) {
             this.bidHistory = data.bidHistory;
@@ -74,7 +91,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Updated auction state:', {
             currentPrice: this.auctionState.currentPrice,
             currentBidderTeamId: this.auctionState.currentBidderTeamId,
-            timerEndsAt: this.auctionState.timerEndsAt
+            timerEndsAt: this.auctionState.timerEndsAt,
+            status: this.auctionState.status
           });
           
           // Start timer monitoring
@@ -156,6 +174,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.timer = '00:00';
           this.onTimerExpired();
         }
+      } else if (this.auctionState && this.auctionState.status === 'PAUSED') {
+        // Show paused state
+        this.timer = 'PAUSED';
       } else {
         this.timer = '00:00';
       }
@@ -168,6 +189,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
       // Complete the auction
       this.completeAuction();
     }
+  }
+
+  pauseAuction() {
+    this.http.post('http://localhost:3000/api/auction/pause', {}, {
+      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
+    }).subscribe({
+      next: () => {
+        console.log('Auction paused');
+        this.fetchState();
+      },
+      error: (e) => {
+        console.error('Failed to pause auction:', e);
+        alert(e.error?.message || 'Failed to pause auction');
+      }
+    });
+  }
+
+  resumeAuction() {
+    this.http.post('http://localhost:3000/api/auction/resume', {}, {
+      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
+    }).subscribe({
+      next: () => {
+        console.log('Auction resumed');
+        this.fetchState();
+      },
+      error: (e) => {
+        console.error('Failed to resume auction:', e);
+        alert(e.error?.message || 'Failed to resume auction');
+      }
+    });
+  }
+
+  sellPlayer() {
+    if (!this.auctionState?.currentBidderTeamId) {
+      alert('No bidder to sell to. Player will be marked as unsold.');
+    }
+    
+    // Use completeAuction which handles selling to current bidder
+    this.completeAuction();
+  }
+
+  undoLastBid() {
+    if (!confirm('Are you sure you want to undo the last bid?')) {
+      return;
+    }
+
+    this.http.post('http://localhost:3000/api/auction/undo-bid', {}, {
+      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
+    }).subscribe({
+      next: (response: any) => {
+        console.log('Bid undone:', response);
+        this.fetchState();
+      },
+      error: (e) => {
+        console.error('Failed to undo bid:', e);
+        alert(e.error?.message || 'Failed to undo bid');
+      }
+    });
+  }
+
+  reopenPlayer(playerId: number) {
+    if (!confirm('Are you sure you want to reopen this player for auction? This will revert team changes if player was sold.')) {
+      return;
+    }
+
+    this.http.post('http://localhost:3000/api/auction/reopen-player', { playerId }, {
+      headers: { Authorization: `Bearer ${this.authService.getAccessToken()}` }
+    }).subscribe({
+      next: (response: any) => {
+        console.log('Player reopened:', response);
+        this.fetchState();
+      },
+      error: (e) => {
+        console.error('Failed to reopen player:', e);
+        alert(e.error?.message || 'Failed to reopen player');
+      }
+    });
   }
 
   completeAuction() {
@@ -373,16 +471,78 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return amount > this.auctionState.currentPrice && team.remainingBudget >= amount;
   }
 
-  // Legacy method - kept for backward compatibility but disabled for owners
-  placeBid(amount: number) {
-    // Owners can no longer place bids directly
-    if (this.user?.role === 'OWNER') {
-      alert('Only admin can place bids on behalf of teams.');
+  placeBidAsOwner(amount: number) {
+    // Only owners can use this method
+    if (this.user?.role !== 'OWNER') {
+      console.error('This method is for owners only');
       return;
     }
+
+    // Validate amount
+    if (!amount || amount <= 0 || isNaN(amount)) {
+      console.error('Invalid bid amount:', amount);
+      alert('Please enter a valid bid amount');
+      return;
+    }
+
+    // Validate auction state
+    if (!this.auctionState) {
+      console.error('Auction state not loaded');
+      alert('Auction state not available. Please refresh the page.');
+      return;
+    }
+
+    // Validate auction is LIVE
+    if (this.auctionState.status !== 'LIVE') {
+      console.error('Auction is not live. Status:', this.auctionState.status);
+      alert('Auction is not currently live.');
+      return;
+    }
+
+    // Validate current price
+    if (amount <= this.auctionState.currentPrice) {
+      console.error('Bid amount must be higher than current price');
+      alert(`Bid must be higher than current price (${this.auctionState.currentPrice})`);
+      return;
+    }
+
+    // Find user's team
+    const myTeam = this.teams.find(t => t.ownerId === this.user.id);
+    if (!myTeam) {
+      console.error('Team not found for user:', this.user);
+      console.log('Available teams:', this.teams);
+      console.log('User ID:', this.user.id);
+      alert('Team not found. Please contact administrator.');
+      return;
+    }
+
+    // Validate team budget
+    if (myTeam.remainingBudget < amount) {
+      console.error('Insufficient budget');
+      alert(`Insufficient budget. You have ${myTeam.remainingBudget} remaining.`);
+      return;
+    }
+
+    // Ensure socket is connected
+    this.socketService.connect();
+
+    console.log('Owner placing bid:', { amount, teamId: myTeam.id, teamName: myTeam.name });
+    this.socketService.emit('PLACE_BID', { 
+      amount, 
+      teamId: myTeam.id,
+      isAdminBid: false,
+      ownerUserId: this.user.id
+    });
     
-    // If admin calls this, redirect to placeBidForTeam
-    if (this.user?.role === 'ADMIN') {
+    // Clear custom bid amount after placing bid
+    this.customBidAmount = 0;
+  }
+
+  // Legacy method - kept for backward compatibility
+  placeBid(amount: number) {
+    if (this.user?.role === 'OWNER') {
+      this.placeBidAsOwner(amount);
+    } else if (this.user?.role === 'ADMIN') {
       if (!this.selectedTeamId) {
         alert('Please select a team first');
         return;

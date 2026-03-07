@@ -13,9 +13,17 @@ export class SocketService {
   private readonly URL = 'http://localhost:4200';
 
   constructor() {
+    // Get token from localStorage (avoiding circular dependency)
+    const token = localStorage.getItem('accessToken');
+    
     this.socket = io(this.URL, {
       withCredentials: true,
-      autoConnect: false
+      autoConnect: false,
+      auth: token ? { token } : {},
+      query: token ? { token } : {},
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
     });
   }
 
@@ -29,6 +37,21 @@ export class SocketService {
     if (this.socket.connected) {
       this.socket.disconnect();
     }
+  }
+
+  // Reconnection logic with state sync
+  onReconnect(callback: () => void) {
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      callback();
+    });
+  }
+
+  onDisconnect(callback: () => void) {
+    this.socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      callback();
+    });
   }
 
   emit(eventName: string, data: any) {
