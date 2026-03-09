@@ -13,6 +13,7 @@ import { ApiService } from '../../../services/api.service';
 export class SeasonsComponent implements OnInit {
   groups: any[] = [];
   seasons: any[] = [];
+  auctioneers: any[] = [];
   selectedGroupId: number | null = null;
   showCreateModal = false;
   showEditModal = false;
@@ -20,7 +21,8 @@ export class SeasonsComponent implements OnInit {
   formData = {
     name: '',
     year: new Date().getFullYear(),
-    budget: 10000
+    budget: 10000,
+    auctioneerId: null as number | null
   };
 
   constructor(
@@ -31,11 +33,21 @@ export class SeasonsComponent implements OnInit {
 
   ngOnInit() {
     this.loadGroups();
+    this.loadAuctioneers();
     this.route.queryParams.subscribe(params => {
       if (params['groupId']) {
         this.selectedGroupId = +params['groupId'];
         this.loadSeasons();
       }
+    });
+  }
+
+  loadAuctioneers() {
+    this.apiService.getAuctioneers().subscribe({
+      next: (data) => {
+        this.auctioneers = Array.isArray(data) ? data : (data.auctioneers || []);
+      },
+      error: (e) => console.error('Failed to load auctioneers:', e)
     });
   }
 
@@ -74,10 +86,12 @@ export class SeasonsComponent implements OnInit {
       alert('Please select a group first');
       return;
     }
+    const selectedGroup = this.groups.find(g => g.id === this.selectedGroupId);
     this.formData = {
       name: '',
       year: new Date().getFullYear(),
-      budget: 10000
+      budget: 10000,
+      auctioneerId: selectedGroup?.auctioneerId ?? selectedGroup?.auctioneer?.id ?? null
     };
     this.showCreateModal = true;
   }
@@ -87,7 +101,8 @@ export class SeasonsComponent implements OnInit {
     this.formData = {
       name: season.name,
       year: season.year,
-      budget: season.budget || 10000
+      budget: season.budget || 10000,
+      auctioneerId: season.auctioneerId ?? season.auctioneer?.id ?? null
     };
     this.showEditModal = true;
   }
@@ -104,7 +119,12 @@ export class SeasonsComponent implements OnInit {
       return;
     }
 
-    this.apiService.createSeason(this.selectedGroupId, this.formData).subscribe({
+    this.apiService.createSeason(this.selectedGroupId, {
+      name: this.formData.name,
+      year: this.formData.year,
+      budget: this.formData.budget,
+      auctioneerId: this.formData.auctioneerId
+    }).subscribe({
       next: () => {
         this.closeModals();
         this.loadSeasons();
@@ -122,7 +142,12 @@ export class SeasonsComponent implements OnInit {
       return;
     }
 
-    this.apiService.updateSeason(this.selectedSeason.id, this.formData).subscribe({
+    this.apiService.updateSeason(this.selectedSeason.id, {
+      name: this.formData.name,
+      year: this.formData.year,
+      budget: this.formData.budget,
+      auctioneerId: this.formData.auctioneerId
+    }).subscribe({
       next: () => {
         this.closeModals();
         this.loadSeasons();

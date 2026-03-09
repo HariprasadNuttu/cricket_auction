@@ -50,6 +50,38 @@ async function main() {
     });
     console.log('✅ Season created:', season.name);
 
+    // 3a. Create Auctioneer User
+    console.log('\n🔨 Creating auctioneer user...');
+    const auctioneer = await prisma.user.upsert({
+        where: { email: 'auctioneer@auction.com' },
+        update: {},
+        create: {
+            email: 'auctioneer@auction.com',
+            password: await bcrypt.hash('auctioneer123', 10),
+            name: 'Auctioneer User',
+            role: Role.AUCTIONEER
+        }
+    });
+    console.log('✅ Auctioneer created:', auctioneer.email);
+
+    // 3b. Assign auctioneer to season and create Auction Room
+    console.log('\n🏠 Assigning auctioneer to season and creating auction room...');
+    await prisma.season.update({
+        where: { id: season.id },
+        data: { auctioneerId: auctioneer.id }
+    });
+    await prisma.auctionRoom.upsert({
+        where: { seasonId: season.id },
+        update: {},
+        create: {
+            seasonId: season.id,
+            auctioneerId: auctioneer.id,
+            name: `${season.name} - ${group.name}`,
+            status: 'CREATED'
+        }
+    });
+    console.log('✅ Auction room created');
+
     // 4. Create Owner Users and Teams
     console.log('\n👥 Creating owners and teams...');
     const teamData = [
@@ -226,6 +258,7 @@ async function main() {
     console.log(`   - SeasonPlayers: ${players.length}`);
     console.log('\n🔑 Login Credentials:');
     console.log('   Admin: admin@auction.com / admin123');
+    console.log('   Auctioneer: auctioneer@auction.com / auctioneer123');
     console.log('   Owner 1: owner1@auction.com / owner123');
     console.log('   Owner 2: owner2@auction.com / owner123');
     console.log('   Owner 3: owner3@auction.com / owner123');

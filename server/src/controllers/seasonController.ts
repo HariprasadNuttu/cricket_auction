@@ -8,7 +8,7 @@ interface AuthRequest extends Request {
 export const createSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { groupId } = req.params;
-        const { name, year, budget } = req.body;
+        const { name, year, budget, auctioneerId } = req.body;
         const groupIdNum = parseInt(groupId);
 
         if (!name) {
@@ -24,20 +24,46 @@ export const createSeason = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Group not found' });
         }
 
+        const auctioneerIdNum = auctioneerId != null && auctioneerId !== '' ? parseInt(auctioneerId) : null;
+        if (auctioneerIdNum) {
+            const auctioneer = await prisma.user.findUnique({ where: { id: auctioneerIdNum } });
+            if (!auctioneer || auctioneer.role !== 'AUCTIONEER') {
+                return res.status(400).json({ error: 'Selected user must have Auctioneer role' });
+            }
+        }
+
         const season = await prisma.season.create({
             data: {
                 groupId: groupIdNum,
                 name,
                 year: year != null ? parseInt(year) : null,
                 budget: budget != null ? parseInt(budget) : null,
+                auctioneerId: auctioneerIdNum,
                 status: 'DRAFT'
             },
             include: {
                 group: {
                     select: { id: true, name: true }
+                },
+                auctioneer: {
+                    select: { id: true, name: true, email: true }
                 }
             }
         });
+
+        // Create AuctionRoom when auctioneer is assigned
+        if (auctioneerIdNum) {
+            await prisma.auctionRoom.upsert({
+                where: { seasonId: season.id },
+                update: { auctioneerId: auctioneerIdNum },
+                create: {
+                    seasonId: season.id,
+                    auctioneerId: auctioneerIdNum,
+                    name: `${season.name} - ${group.name}`,
+                    status: 'CREATED'
+                }
+            });
+        }
 
         res.status(201).json(season);
     } catch (error: any) {
@@ -55,6 +81,9 @@ export const getSeasonsByGroup = async (req: AuthRequest, res: Response) => {
         const seasons = await prisma.season.findMany({
             where: { groupId: groupIdNum },
             include: {
+                auctioneer: {
+                    select: { id: true, name: true, email: true }
+                },
                 _count: {
                     select: {
                         teams: true,
@@ -82,6 +111,9 @@ export const getSeasonById = async (req: AuthRequest, res: Response) => {
             include: {
                 group: {
                     select: { id: true, name: true }
+                },
+                auctioneer: {
+                    select: { id: true, name: true, email: true }
                 },
                 teams: {
                     include: {
@@ -122,7 +154,7 @@ export const getSeasonById = async (req: AuthRequest, res: Response) => {
 export const updateSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, year, budget, status } = req.body;
+        const { name, year, budget, status, auctioneerId } = req.body;
         const seasonId = parseInt(id);
 
         const updateData: Record<string, any> = {};
@@ -130,11 +162,46 @@ export const updateSeason = async (req: AuthRequest, res: Response) => {
         if (year !== undefined) updateData.year = year != null ? parseInt(year) : null;
         if (budget !== undefined) updateData.budget = budget != null ? parseInt(budget) : null;
         if (status !== undefined) updateData.status = status;
+        if (auctioneerId !== undefined) {
+            if (auctioneerId === null || auctioneerId === '') {
+                updateData.auctioneerId = null;
+            } else {
+                const auctioneerIdNum = parseInt(auctioneerId);
+                const auctioneer = await prisma.user.findUnique({ where: { id: auctioneerIdNum } });
+                if (!auctioneer || auctioneer.role !== 'AUCTIONEER') {
+                    return res.status(400).json({ error: 'Selected user must have Auctioneer role' });
+                }
+                updateData.auctioneerId = auctioneerIdNum;
+            }
+        }
 
         const season = await prisma.season.update({
             where: { id: seasonId },
-            data: updateData
+            data: updateData,
+            include: {
+                group: { select: { id: true, name: true } },
+                auctioneer: { select: { id: true, name: true, email: true } }
+            }
         });
+
+        // Sync AuctionRoom when auctioneer is assigned or cleared
+        if (auctioneerId !== undefined) {
+            if (updateData.auctioneerId) {
+                const group = await prisma.group.findUnique({ where: { id: season.groupId } });
+                await prisma.auctionRoom.upsert({
+                    where: { seasonId: seasonId },
+                    update: { auctioneerId: updateData.auctioneerId },
+                    create: {
+                        seasonId: seasonId,
+                        auctioneerId: updateData.auctioneerId,
+                        name: `${season.name} - ${group?.name || 'Auction'}`,
+                        status: 'CREATED'
+                    }
+                });
+            } else {
+                await prisma.auctionRoom.deleteMany({ where: { seasonId: seasonId } });
+            }
+        }
 
         res.json(season);
     } catch (error: any) {

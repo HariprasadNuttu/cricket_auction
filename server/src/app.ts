@@ -7,6 +7,7 @@ import groupRoutes from './routes/group.routes';
 import seasonRoutes from './routes/season.routes';
 import playerRoutes from './routes/player.routes';
 import directAssignRoutes from './routes/directAssign.routes';
+import auctionRoomRoutes from './routes/auctionRoom.routes';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api', seasonRoutes); // Season routes include both /groups/:groupId/seasons and /seasons/:id
 app.use('/api', playerRoutes); // Player routes include both /groups/:groupId/players and /seasons/:seasonId/players
 app.use('/api', directAssignRoutes);
+app.use('/api/auction-rooms', auctionRoomRoutes);
 
 app.get('/health', (req, res) => {
     res.send('OK');

@@ -118,7 +118,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
         console.log('Auction completed:', data);
         setTimeout(() => {
           this.loadAuctionState();
-          if (this.user?.role === 'ADMIN') {
+          if (this.user?.role === 'ADMIN' || this.user?.role === 'AUCTIONEER') {
             setTimeout(() => {
               if (this.getActivePlayersCount() > 0) {
                 this.startRandomAuction();
@@ -363,9 +363,9 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
   }
 
   placeBidForTeam(amount: number, teamId?: number | string) {
-    if (this.user?.role !== 'ADMIN') {
-      console.error('Only admin can place bids');
-      alert('Only admin can place bids on behalf of teams');
+    if (this.user?.role !== 'ADMIN' && this.user?.role !== 'AUCTIONEER') {
+      console.error('Only admin or auctioneer can place bids on behalf of teams');
+      alert('Only admin or auctioneer can place bids on behalf of teams');
       return;
     }
 
@@ -414,12 +414,13 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
 
     this.socketService.connect();
 
-    console.log('Admin placing bid:', { amount, teamId: selectedTeam.id, teamName: selectedTeam.name });
+    const isAuctioneer = this.user?.role === 'AUCTIONEER';
     (this.socketService as any).socket.emit('PLACE_BID', { 
       amount, 
       teamId: selectedTeam.id,
       seasonId: this.selectedSeasonId,
-      isAdminBid: true,
+      isAdminBid: this.user?.role === 'ADMIN',
+      isAuctioneerBid: isAuctioneer,
       adminUserId: this.user.id
     });
     

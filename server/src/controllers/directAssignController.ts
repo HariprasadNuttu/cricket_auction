@@ -15,29 +15,67 @@ const upload = multer({
 
 export const uploadMiddleware = upload.single('file');
 
-// Direct assign single player to team
+// Direct assign single player to team (accepts seasonPlayerId OR playerId - group-level)
 export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
     try {
         const { seasonId } = req.params;
-        const { seasonPlayerId, teamId, amount } = req.body;
+        const { seasonPlayerId, playerId, teamId, amount } = req.body;
         const seasonIdNum = parseInt(seasonId);
 
-        if (!seasonPlayerId || !teamId || amount === undefined) {
+        if ((!seasonPlayerId && !playerId) || !teamId || amount === undefined) {
             return res.status(400).json({ 
-                error: 'seasonPlayerId, teamId, and amount are required' 
+                error: 'Either seasonPlayerId or playerId, plus teamId and amount are required' 
             });
         }
 
         const assignAmount = parseInt(amount) || 0;
 
-        // Get season player
-        const seasonPlayer = await prisma.seasonPlayer.findUnique({
-            where: { id: seasonPlayerId },
-            include: {
-                player: true,
-                season: true
+        let seasonPlayer;
+
+        if (seasonPlayerId) {
+            // Use existing season player
+            seasonPlayer = await prisma.seasonPlayer.findUnique({
+                where: { id: seasonPlayerId },
+                include: {
+                    player: true,
+                    season: true
+                }
+            });
+        } else if (playerId) {
+            // Assign by group player ID - find or create season player
+            const season = await prisma.season.findUnique({
+                where: { id: seasonIdNum },
+                include: { group: true }
+            });
+            if (!season) {
+                return res.status(404).json({ error: 'Season not found' });
             }
-        });
+            const player = await prisma.player.findUnique({
+                where: { id: parseInt(playerId) }
+            });
+            if (!player || player.groupId !== season.groupId) {
+                return res.status(404).json({ error: 'Player not found in this group' });
+            }
+            // Find or create season player
+            seasonPlayer = await prisma.seasonPlayer.findUnique({
+                where: {
+                    seasonId_playerId: { seasonId: seasonIdNum, playerId: player.id }
+                },
+                include: { player: true, season: true }
+            });
+            if (!seasonPlayer) {
+                seasonPlayer = await prisma.seasonPlayer.create({
+                    data: {
+                        seasonId: seasonIdNum,
+                        playerId: player.id,
+                        status: 'ACTIVE'
+                    },
+                    include: { player: true, season: true }
+                });
+            }
+        } else {
+            return res.status(400).json({ error: 'seasonPlayerId or playerId required' });
+        }
 
         if (!seasonPlayer) {
             return res.status(404).json({ error: 'Season player not found' });
@@ -85,7 +123,7 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
         await prisma.$transaction(async (tx) => {
             // Update season player
             await tx.seasonPlayer.update({
-                where: { id: seasonPlayerId },
+                where: { id: seasonPlayer.id },
                 data: {
                     status: 'SOLD',
                     soldPrice: assignAmount,
@@ -125,7 +163,7 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
 
         res.json({ 
             message: 'Player assigned successfully',
-            seasonPlayerId: seasonPlayerId,
+            seasonPlayerId: seasonPlayer.id,
             teamId: teamId,
             amount: assignAmount
         });

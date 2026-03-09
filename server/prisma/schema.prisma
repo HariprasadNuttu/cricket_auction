@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  AUCTIONEER
   OWNER
   VIEWER
 }
@@ -69,41 +70,69 @@ model User {
   
   // Groups created by admin
   groupsCreated Group[] @relation("GroupCreator")
+  // Groups where user is default auctioneer
+  groupsAsAuctioneer Group[] @relation("GroupAuctioneer")
+  // Seasons where user is assigned auctioneer
+  seasonsAsAuctioneer Season[] @relation("SeasonAuctioneer")
+  // Auction rooms assigned to auctioneer
+  auctionRooms AuctionRoom[]
+}
+
+// Auction Room - links a Season to an Auctioneer who conducts the auction
+model AuctionRoom {
+  id          Int      @id @default(autoincrement())
+  seasonId    Int      @unique
+  auctioneerId Int
+  name        String?  // e.g., "2026 Season Auction"
+  status      String   @default("CREATED") // CREATED, LIVE, COMPLETED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  season      Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  auctioneer  User     @relation(fields: [auctioneerId], references: [id], onDelete: Cascade)
+
+  @@index([auctioneerId])
+  @@index([seasonId])
 }
 
 // Cricket Group (Top Level)
 model Group {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  createdById Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  name         String
+  description  String?
+  createdById  Int
+  auctioneerId Int?     // Default auctioneer for this group (conducts auctions for seasons)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
-  creator     User     @relation("GroupCreator", fields: [createdById], references: [id])
-  seasons     Season[]
-  players     Player[] // Players belong to group (Option A - Recommended)
+  creator      User     @relation("GroupCreator", fields: [createdById], references: [id])
+  auctioneer   User?    @relation("GroupAuctioneer", fields: [auctioneerId], references: [id], onDelete: SetNull)
+  seasons      Season[]
+  players      Player[] // Players belong to group (Option A - Recommended)
   
   @@unique([name])
 }
 
 // Season within a Group
 model Season {
-  id            Int           @id @default(autoincrement())
-  groupId       Int
-  name          String        // e.g., "2026 Season", "Summer Cup 2026"
-  year          Int?
-  budget        Int?          // Default budget per team (e.g., 2000)
-  status        SeasonStatus  @default(DRAFT)
-  auctionStarted Boolean      @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             Int           @id @default(autoincrement())
+  groupId        Int
+  name           String        // e.g., "2026 Season", "Summer Cup 2026"
+  year           Int?
+  budget         Int?          // Default budget per team (e.g., 2000)
+  status         SeasonStatus  @default(DRAFT)
+  auctioneerId   Int?          // Auctioneer who conducts this season's auction
+  auctionStarted Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   
-  group         Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group          Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  auctioneer      User?         @relation("SeasonAuctioneer", fields: [auctioneerId], references: [id], onDelete: SetNull)
   teams         Team[]
   seasonPlayers SeasonPlayer[]
   seasonOwners  SeasonOwner[]
   auctionState  AuctionState?
+  auctionRoom   AuctionRoom?
   bidLogs       BidLog[]
   auctionLogs   AuctionLog[]
 }

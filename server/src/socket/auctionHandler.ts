@@ -24,6 +24,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
         amount: number; 
         teamId: number; 
         isAdminBid?: boolean; 
+        isAuctioneerBid?: boolean;
         adminUserId?: number;
         ownerUserId?: number;
     }) => {
@@ -178,13 +179,22 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                     userIdForLog = payload.ownerUserId;
                 }
             }
-            // Check if it's an admin bid (only if not owner bid)
-            else if (payload.isAdminBid && payload.adminUserId) {
-                const adminUser = await prisma.user.findUnique({ 
+            // Check if it's an admin or auctioneer bid (only if not owner bid)
+            else if ((payload.isAdminBid || payload.isAuctioneerBid) && payload.adminUserId) {
+                const user = await prisma.user.findUnique({ 
                     where: { id: payload.adminUserId } 
                 });
-                if (adminUser && adminUser.role === 'ADMIN') {
-                    userIdForLog = payload.adminUserId;
+                if (user && (user.role === 'ADMIN' || user.role === 'AUCTIONEER')) {
+                    if (user.role === 'AUCTIONEER') {
+                        const auctionRoom = await prisma.auctionRoom.findUnique({
+                            where: { seasonId }
+                        });
+                        if (auctionRoom && auctionRoom.auctioneerId === user.id) {
+                            userIdForLog = payload.adminUserId;
+                        }
+                    } else {
+                        userIdForLog = payload.adminUserId;
+                    }
                 }
             }
 

@@ -29,11 +29,11 @@ export class ApiService {
     return this.http.get<any>(`${this.apiUrl}/groups/${groupId}`, { headers: this.getHeaders() });
   }
 
-  createGroup(data: { name: string; description?: string }): Observable<any> {
+  createGroup(data: { name: string; description?: string; auctioneerId?: number | null }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/groups`, data, { headers: this.getHeaders() });
   }
 
-  updateGroup(groupId: number, data: { name?: string; description?: string }): Observable<any> {
+  updateGroup(groupId: number, data: { name?: string; description?: string; auctioneerId?: number | null }): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/groups/${groupId}`, data, { headers: this.getHeaders() });
   }
 
@@ -50,11 +50,11 @@ export class ApiService {
     return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}`, { headers: this.getHeaders() });
   }
 
-  createSeason(groupId: number, data: { name: string; year: number; budget?: number }): Observable<any> {
+  createSeason(groupId: number, data: { name: string; year: number; budget?: number; auctioneerId?: number | null }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/groups/${groupId}/seasons`, data, { headers: this.getHeaders() });
   }
 
-  updateSeason(seasonId: number, data: { name?: string; year?: number; budget?: number; status?: string }): Observable<any> {
+  updateSeason(seasonId: number, data: { name?: string; year?: number; budget?: number; status?: string; auctioneerId?: number | null }): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/seasons/${seasonId}`, data, { headers: this.getHeaders() });
   }
 
@@ -136,8 +136,8 @@ export class ApiService {
     return this.http.delete<any>(`${this.apiUrl}/seasons/${seasonId}/players/${playerId}`, { headers: this.getHeaders() });
   }
 
-  // Direct Assignment APIs
-  directAssignPlayer(seasonId: number, data: { playerId: number; teamId: number; amount: number }): Observable<any> {
+  // Direct Assignment APIs (use seasonPlayerId OR playerId - playerId assigns group player, auto-adds to season)
+  directAssignPlayer(seasonId: number, data: { seasonPlayerId?: number; playerId?: number; teamId: number; amount: number }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/direct-assign`, data, { headers: this.getHeaders() });
   }
 
@@ -147,8 +147,25 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/direct-assign/bulk`, formData, { headers: this.getHeaders() });
   }
 
-  removeDirectAssignment(seasonId: number, playerId: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/seasons/${seasonId}/direct-assign/${playerId}`, { headers: this.getHeaders() });
+  removeDirectAssignment(seasonId: number, seasonPlayerId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/direct-assign/remove`, { seasonPlayerId }, { headers: this.getHeaders() });
+  }
+
+  // Auction Room APIs
+  getAuctionRooms(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/auction-rooms`, { headers: this.getHeaders() });
+  }
+
+  getAuctioneers(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/auction-rooms/auctioneers`, { headers: this.getHeaders() });
+  }
+
+  createAuctionRoom(data: { seasonId: number; auctioneerId: number; name?: string }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auction-rooms`, data, { headers: this.getHeaders() });
+  }
+
+  deleteAuctionRoom(id: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/auction-rooms/${id}`, { headers: this.getHeaders() });
   }
 
   // Auction APIs

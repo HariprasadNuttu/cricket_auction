@@ -14,6 +14,7 @@
           <tr>
             <th>Group Name</th>
             <th>Description</th>
+            <th>Auctioneer</th>
             <th>Created At</th>
             <th>Actions</th>
           </tr>
@@ -22,6 +23,7 @@
           <tr *ngFor="let group of groups">
             <td><strong>{{ group.name }}</strong></td>
             <td>{{ group.description || '-' }}</td>
+            <td>{{ group.auctioneer?.name || '-' }}</td>
             <td>{{ group.createdAt | date:'short' }}</td>
             <td>
               <button class="btn btn-sm btn-info me-2" (click)="viewSeasons(group.id)">
@@ -36,7 +38,7 @@
             </td>
           </tr>
           <tr *ngIf="groups.length === 0">
-            <td colspan="4" class="text-center text-muted">No groups found. Create your first group!</td>
+            <td colspan="5" class="text-center text-muted">No groups found. Create your first group!</td>
           </tr>
         </tbody>
       </table>
@@ -60,6 +62,14 @@
             <div class="mb-3">
               <label class="form-label">Description</label>
               <textarea class="form-control" [(ngModel)]="formData.description" name="description" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Assign Auctioneer</label>
+              <select class="form-select" [(ngModel)]="formData.auctioneerId" name="auctioneerId">
+                <option [ngValue]="null">-- No auctioneer --</option>
+                <option *ngFor="let a of auctioneers" [value]="a.id">{{ a.name }} ({{ a.email }})</option>
+              </select>
+              <small class="text-muted">Default auctioneer for this group. Can conduct auctions for seasons.</small>
             </div>
           </form>
         </div>
@@ -89,6 +99,14 @@
             <div class="mb-3">
               <label class="form-label">Description</label>
               <textarea class="form-control" [(ngModel)]="formData.description" name="description" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Assign Auctioneer</label>
+              <select class="form-select" [(ngModel)]="formData.auctioneerId" name="auctioneerId">
+                <option [ngValue]="null">-- No auctioneer --</option>
+                <option *ngFor="let a of auctioneers" [value]="a.id">{{ a.name }} ({{ a.email }})</option>
+              </select>
+              <small class="text-muted">Default auctioneer for this group.</small>
             </div>
           </form>
         </div>

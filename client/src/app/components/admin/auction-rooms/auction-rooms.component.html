@@ -1,0 +1,89 @@
+<div class="auction-rooms-container">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Auction Rooms</h2>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <i class="bi bi-plus-circle"></i> Create Auction Room
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <p class="text-muted">Create auction rooms and assign auctioneers to conduct auctions. Admin manages setup; Auctioneers conduct live auctions.</p>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Room / Season</th>
+            <th>Group</th>
+            <th>Auctioneer</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let room of rooms">
+            <td><strong>{{ room.name || room.season?.name || 'Auction Room' }}</strong></td>
+            <td>{{ room.season?.group?.name || '-' }}</td>
+            <td>{{ room.auctioneer?.name }} ({{ room.auctioneer?.email }})</td>
+            <td>
+              <button class="btn btn-sm btn-primary me-2" (click)="conductAuction(room)">
+                <i class="bi bi-hammer"></i> Conduct Auction
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="deleteRoom(room)">
+                <i class="bi bi-trash"></i> Delete
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="rooms.length === 0">
+            <td colspan="4" class="text-center text-muted">No auction rooms. Create one to get started.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <div class="modal fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'flex' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Auction Room</h5>
+          <button type="button" class="btn-close" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Group *</label>
+              <select class="form-select" [(ngModel)]="selectedGroupId" name="groupId" (change)="onGroupChange()">
+                <option [value]="null">-- Select Group --</option>
+                <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Season *</label>
+              <select class="form-select" [(ngModel)]="selectedSeasonId" name="seasonId" [disabled]="!selectedGroupId">
+                <option [value]="null">-- Select Season --</option>
+                <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Assign Auctioneer *</label>
+              <select class="form-select" [(ngModel)]="selectedAuctioneerId" name="auctioneerId">
+                <option [value]="null">-- Select Auctioneer --</option>
+                <option *ngFor="let a of auctioneers" [value]="a.id">{{ a.name }} ({{ a.email }})</option>
+              </select>
+              <small class="text-muted">Auctioneers must be registered with Auctioneer role.</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Room Name (optional)</label>
+              <input type="text" class="form-control" [(ngModel)]="roomName" name="roomName" placeholder="e.g., 2026 Season Auction">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="createRoom()">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showCreateModal" [style.display]="showCreateModal ? 'block' : 'none'" (click)="closeModal()"></div>
+</div>

@@ -24,6 +24,8 @@ export class LoginComponent {
         const user = response.user;
         if (user?.role === 'ADMIN') {
           this.router.navigate(['/admin']);
+        } else if (user?.role === 'AUCTIONEER') {
+          this.router.navigate(['/auctioneer']);
         } else {
           this.router.navigate(['/dashboard']);
         }

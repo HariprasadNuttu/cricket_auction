@@ -1,0 +1,24 @@
+<div class="auctioneer-rooms">
+  <h2 class="mb-4">My Auction Rooms</h2>
+  <p class="text-muted mb-4">Select an auction room to conduct the auction for the assigned season.</p>
+
+  <div class="row">
+    <div class="col-md-6 col-lg-4" *ngFor="let room of rooms">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">{{ room.name || room.season?.name || 'Auction Room' }}</h5>
+          <p class="card-text text-muted">
+            {{ room.season?.group?.name }} - {{ room.season?.name }}
+          </p>
+          <button class="btn btn-primary" (click)="conductAuction(room)">
+            <i class="bi bi-hammer"></i> Conduct Auction
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="rooms.length === 0" class="alert alert-info">
+    No auction rooms assigned to you. Contact admin to get assigned to an auction.
+  </div>
+</div>

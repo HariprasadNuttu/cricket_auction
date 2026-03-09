@@ -7,7 +7,7 @@ interface AuthRequest extends Request {
 
 export const createGroup = async (req: AuthRequest, res: Response) => {
     try {
-        const { name, description } = req.body;
+        const { name, description, auctioneerId } = req.body;
         const userId = req.user?.userId;
 
         if (!userId) {
@@ -18,14 +18,26 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Group name is required' });
         }
 
+        const auctioneerIdNum = auctioneerId != null ? parseInt(auctioneerId) : null;
+        if (auctioneerIdNum) {
+            const auctioneer = await prisma.user.findUnique({ where: { id: auctioneerIdNum } });
+            if (!auctioneer || auctioneer.role !== 'AUCTIONEER') {
+                return res.status(400).json({ error: 'Selected user must have Auctioneer role' });
+            }
+        }
+
         const group = await prisma.group.create({
             data: {
                 name,
                 description: description || null,
-                createdById: userId
+                createdById: userId,
+                auctioneerId: auctioneerIdNum
             },
             include: {
                 creator: {
+                    select: { id: true, name: true, email: true }
+                },
+                auctioneer: {
                     select: { id: true, name: true, email: true }
                 }
             }
@@ -46,6 +58,9 @@ export const getGroups = async (req: AuthRequest, res: Response) => {
         const groups = await prisma.group.findMany({
             include: {
                 creator: {
+                    select: { id: true, name: true, email: true }
+                },
+                auctioneer: {
                     select: { id: true, name: true, email: true }
                 },
                 _count: {
@@ -74,6 +89,9 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
             where: { id: groupId },
             include: {
                 creator: {
+                    select: { id: true, name: true, email: true }
+                },
+                auctioneer: {
                     select: { id: true, name: true, email: true }
                 },
                 seasons: {
@@ -113,14 +131,31 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
 export const updateGroup = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, description } = req.body;
+        const { name, description, auctioneerId } = req.body;
         const groupId = parseInt(id);
+
+        const updateData: Record<string, any> = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (auctioneerId !== undefined) {
+            if (auctioneerId === null || auctioneerId === '') {
+                updateData.auctioneerId = null;
+            } else {
+                const auctioneerIdNum = parseInt(auctioneerId);
+                const auctioneer = await prisma.user.findUnique({ where: { id: auctioneerIdNum } });
+                if (!auctioneer || auctioneer.role !== 'AUCTIONEER') {
+                    return res.status(400).json({ error: 'Selected user must have Auctioneer role' });
+                }
+                updateData.auctioneerId = auctioneerIdNum;
+            }
+        }
 
         const group = await prisma.group.update({
             where: { id: groupId },
-            data: {
-                name,
-                description
+            data: updateData,
+            include: {
+                creator: { select: { id: true, name: true, email: true } },
+                auctioneer: { select: { id: true, name: true, email: true } }
             }
         });
 

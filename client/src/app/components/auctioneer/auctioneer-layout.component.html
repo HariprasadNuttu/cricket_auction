@@ -1,0 +1,16 @@
+<div class="auctioneer-layout">
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0">Cricket Auction - Auctioneer</span>
+      <div class="d-flex align-items-center" style="gap: 1rem;">
+        <span class="text-white">{{ user?.name }}</span>
+        <span class="badge bg-warning text-dark">Auctioneer</span>
+        <button class="btn btn-outline-light btn-sm" (click)="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4">
+    <router-outlet></router-outlet>
+  </div>
+</div>

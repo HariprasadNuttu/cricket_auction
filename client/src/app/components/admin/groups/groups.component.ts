@@ -12,13 +12,15 @@ import { ApiService } from '../../../services/api.service';
 })
 export class GroupsComponent implements OnInit {
   groups: any[] = [];
+  auctioneers: any[] = [];
   showCreateModal = false;
   showEditModal = false;
   selectedGroup: any = null;
   
   formData = {
     name: '',
-    description: ''
+    description: '',
+    auctioneerId: null as number | null
   };
 
   constructor(
@@ -28,6 +30,16 @@ export class GroupsComponent implements OnInit {
 
   ngOnInit() {
     this.loadGroups();
+    this.loadAuctioneers();
+  }
+
+  loadAuctioneers() {
+    this.apiService.getAuctioneers().subscribe({
+      next: (data) => {
+        this.auctioneers = Array.isArray(data) ? data : (data.auctioneers || []);
+      },
+      error: (e) => console.error('Failed to load auctioneers:', e)
+    });
   }
 
   loadGroups() {
@@ -43,7 +55,7 @@ export class GroupsComponent implements OnInit {
   }
 
   openCreateModal() {
-    this.formData = { name: '', description: '' };
+    this.formData = { name: '', description: '', auctioneerId: null };
     this.showCreateModal = true;
   }
 
@@ -51,7 +63,8 @@ export class GroupsComponent implements OnInit {
     this.selectedGroup = group;
     this.formData = {
       name: group.name,
-      description: group.description || ''
+      description: group.description || '',
+      auctioneerId: group.auctioneerId ?? group.auctioneer?.id ?? null
     };
     this.showEditModal = true;
   }
@@ -60,7 +73,7 @@ export class GroupsComponent implements OnInit {
     this.showCreateModal = false;
     this.showEditModal = false;
     this.selectedGroup = null;
-    this.formData = { name: '', description: '' };
+    this.formData = { name: '', description: '', auctioneerId: null };
   }
 
   createGroup() {
@@ -69,7 +82,11 @@ export class GroupsComponent implements OnInit {
       return;
     }
 
-    this.apiService.createGroup(this.formData).subscribe({
+    this.apiService.createGroup({
+      name: this.formData.name,
+      description: this.formData.description || undefined,
+      auctioneerId: this.formData.auctioneerId
+    }).subscribe({
       next: () => {
         this.closeModals();
         this.loadGroups();
@@ -87,7 +104,11 @@ export class GroupsComponent implements OnInit {
       return;
     }
 
-    this.apiService.updateGroup(this.selectedGroup.id, this.formData).subscribe({
+    this.apiService.updateGroup(this.selectedGroup.id, {
+      name: this.formData.name,
+      description: this.formData.description || undefined,
+      auctioneerId: this.formData.auctioneerId
+    }).subscribe({
       next: () => {
         this.closeModals();
         this.loadGroups();

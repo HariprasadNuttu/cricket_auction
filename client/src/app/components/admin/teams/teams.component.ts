@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../../services/api.service';
 
 @Component({
   selector: 'app-teams',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './teams.component.html',
   styleUrl: './teams.component.css'
 })
@@ -35,6 +35,9 @@ export class TeamsComponent implements OnInit {
     password: ''
   };
   owners: any[] = []; // Season-scoped owners (only for selected season)
+  seasonPlayers: any[] = []; // Season players (for assigned list)
+  groupPlayers: any[] = []; // Group players (for assign - already created players)
+  assignData: { [key: number]: { teamId: number | null; amount: number } } = {}; // Per-player assign form (key = playerId)
 
   constructor(
     private apiService: ApiService,
@@ -91,10 +94,12 @@ export class TeamsComponent implements OnInit {
     this.loadSeasons();
     this.selectedSeasonId = null;
     this.teams = [];
+    this.loadGroupPlayers();
   }
 
   onSeasonChange() {
     this.loadTeams();
+    this.loadGroupPlayers();
     this.router.navigate(['/admin/teams'], { queryParams: { groupId: this.selectedGroupId, seasonId: this.selectedSeasonId } });
   }
 
@@ -105,11 +110,48 @@ export class TeamsComponent implements OnInit {
       next: (data) => {
         this.teams = data.teams || data || [];
         this.loadOwners();
+        this.loadSeasonPlayers();
+        this.loadGroupPlayers();
       },
       error: (e) => {
         console.error('Failed to load teams:', e);
       }
     });
+  }
+
+  loadSeasonPlayers() {
+    if (!this.selectedSeasonId) return;
+    this.apiService.getPlayersBySeason(this.selectedSeasonId).subscribe({
+      next: (data) => {
+        this.seasonPlayers = Array.isArray(data) ? data : (data.players || data || []);
+      },
+      error: (e) => console.error('Failed to load season players:', e)
+    });
+  }
+
+  loadGroupPlayers() {
+    if (!this.selectedGroupId) return;
+    this.apiService.getPlayersByGroup(this.selectedGroupId).subscribe({
+      next: (data) => {
+        this.groupPlayers = Array.isArray(data) ? data : (data.players || data || []);
+      },
+      error: (e) => console.error('Failed to load group players:', e)
+    });
+  }
+
+  // Group players that can be assigned (not yet sold to a team in this season)
+  get availablePlayers() {
+    const assignedPlayerIds = new Set(
+      this.seasonPlayers
+        .filter((sp: any) => sp.status === 'SOLD' && sp.soldType === 'DIRECT_ASSIGN')
+        .map((sp: any) => sp.playerId)
+    );
+    return this.groupPlayers.filter((p: any) => !assignedPlayerIds.has(p.id));
+  }
+
+  // Players already directly assigned to teams this season
+  get assignedPlayers() {
+    return this.seasonPlayers.filter((sp: any) => sp.status === 'SOLD' && sp.soldType === 'DIRECT_ASSIGN');
   }
 
   loadOwners() {
@@ -289,6 +331,54 @@ export class TeamsComponent implements OnInit {
         console.error('Failed to delete team:', e);
         alert(e.error?.message || 'Failed to delete team');
       }
+    });
+  }
+
+  getAssignData(playerId: number) {
+    if (!this.assignData[playerId]) {
+      this.assignData[playerId] = { teamId: this.teams[0]?.id ?? null, amount: 0 };
+    }
+    return this.assignData[playerId];
+  }
+
+  assignPlayer(player: any) {
+    if (!this.selectedSeasonId || !player) return;
+    const data = this.getAssignData(player.id);
+    if (!data.teamId) {
+      alert('Please select a team');
+      return;
+    }
+    const amount = parseInt(String(data.amount), 10) || 0;
+    const team = this.teams.find((t: any) => t.id === data.teamId);
+    if (team && amount > 0 && (team.remainingBudget || 0) < amount) {
+      alert(`Insufficient budget. ${team.name} has ₹${team.remainingBudget || 0} remaining.`);
+      return;
+    }
+    this.apiService.directAssignPlayer(this.selectedSeasonId, {
+      playerId: player.id,
+      teamId: data.teamId,
+      amount
+    }).subscribe({
+      next: () => {
+        this.loadTeams();
+        this.loadSeasonPlayers();
+        this.loadGroupPlayers();
+        delete this.assignData[player.id];
+      },
+      error: (e) => {
+        alert(e.error?.error || 'Failed to assign player');
+      }
+    });
+  }
+
+  removeAssignment(sp: any) {
+    if (!this.selectedSeasonId || !confirm(`Remove ${sp.player?.name} from ${sp.team?.name}?`)) return;
+    this.apiService.removeDirectAssignment(this.selectedSeasonId, sp.id).subscribe({
+      next: () => {
+        this.loadTeams();
+        this.loadSeasonPlayers();
+      },
+      error: (e) => alert(e.error?.error || 'Failed to remove assignment')
     });
   }
 }
