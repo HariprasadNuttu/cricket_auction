@@ -38,7 +38,6 @@ export class PlayersComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    this.loadGroups();
     this.route.queryParams.subscribe(params => {
       if (params['groupId']) {
         this.selectedGroupId = +params['groupId'];
@@ -46,32 +45,28 @@ export class PlayersComponent implements OnInit {
       if (params['seasonId']) {
         this.selectedSeasonId = +params['seasonId'];
         this.viewMode = 'season';
-        this.loadSeasons();
-        this.loadSeasonPlayers();
       }
     });
+    this.loadGroups();
   }
 
   loadGroups() {
-    this.apiService.getPlayersByGroup(1).subscribe({
+    this.apiService.getGroups().subscribe({
       next: (data) => {
-        this.groups = data.groups || [];
+        this.groups = data.groups || data || [];
         if (this.groups.length > 0 && !this.selectedGroupId) {
           this.selectedGroupId = this.groups[0].id;
+        }
+        if (this.selectedGroupId) {
           this.loadPlayers();
+          this.loadSeasons();
+          if (this.selectedSeasonId) {
+            this.loadSeasonPlayers();
+          }
         }
       },
-      error: () => {
-        // Fallback: Load groups normally
-        this.apiService.getGroups().subscribe({
-          next: (groupsData) => {
-            this.groups = groupsData.groups || groupsData || [];
-            if (this.groups.length > 0 && !this.selectedGroupId) {
-              this.selectedGroupId = this.groups[0].id;
-              this.loadPlayers();
-            }
-          }
-        });
+      error: (e) => {
+        console.error('Failed to load groups:', e);
       }
     });
   }
@@ -114,6 +109,7 @@ export class PlayersComponent implements OnInit {
 
   onGroupChange() {
     this.loadPlayers();
+    this.loadSeasons();
     this.selectedSeasonId = null;
     this.viewMode = 'group';
   }

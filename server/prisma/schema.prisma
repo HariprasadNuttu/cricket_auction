@@ -58,7 +58,8 @@ model User {
   
   // User (Owner) can own teams in multiple seasons
   teams        Team[]
-  
+  seasonOwners SeasonOwner[]
+
   refreshToken String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -92,6 +93,7 @@ model Season {
   groupId       Int
   name          String        // e.g., "2026 Season", "Summer Cup 2026"
   year          Int?
+  budget        Int?          // Default budget per team (e.g., 2000)
   status        SeasonStatus  @default(DRAFT)
   auctionStarted Boolean      @default(false)
   createdAt     DateTime      @default(now())
@@ -100,9 +102,25 @@ model Season {
   group         Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   teams         Team[]
   seasonPlayers SeasonPlayer[]
+  seasonOwners  SeasonOwner[]
   auctionState  AuctionState?
   bidLogs       BidLog[]
   auctionLogs   AuctionLog[]
+}
+
+// Owners for a specific season (scoped per season - not shared across groups/seasons)
+model SeasonOwner {
+  id        Int      @id @default(autoincrement())
+  seasonId  Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId])
+  @@index([userId])
 }
 
 // Players belong to Group (can be reused across seasons)

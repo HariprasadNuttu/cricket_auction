@@ -151,6 +151,6 @@ export class SeasonsComponent implements OnInit {
   }
 
   viewSeasonDetails(seasonId: number) {
-    this.router.navigate(['/admin/seasons', seasonId]);
+    this.router.navigate(['/admin/teams'], { queryParams: { groupId: this.selectedGroupId, seasonId } });
   }
 }

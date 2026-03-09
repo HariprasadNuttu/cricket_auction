@@ -66,6 +66,19 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/clone`, data, { headers: this.getHeaders() });
   }
 
+  // Season Owners APIs (scoped per season - not shared across groups)
+  getSeasonOwners(seasonId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}/owners`, { headers: this.getHeaders() });
+  }
+
+  addSeasonOwner(seasonId: number, data: { email: string; password: string; name: string } | { userId: number }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/owners`, data, { headers: this.getHeaders() });
+  }
+
+  removeSeasonOwner(seasonId: number, userId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/seasons/${seasonId}/owners/${userId}`, { headers: this.getHeaders() });
+  }
+
   // Teams APIs
   getTeamsBySeason(seasonId: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}/teams`, { headers: this.getHeaders() });

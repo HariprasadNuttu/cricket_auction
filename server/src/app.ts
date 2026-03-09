@@ -19,9 +19,9 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auction', auctionRoutes);
-app.use('/api', groupRoutes);
-app.use('/api', seasonRoutes);
-app.use('/api', playerRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api', seasonRoutes); // Season routes include both /groups/:groupId/seasons and /seasons/:id
+app.use('/api', playerRoutes); // Player routes include both /groups/:groupId/players and /seasons/:seasonId/players
 app.use('/api', directAssignRoutes);
 
 app.get('/health', (req, res) => {

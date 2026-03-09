@@ -8,7 +8,7 @@ interface AuthRequest extends Request {
 export const createSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { groupId } = req.params;
-        const { name, year } = req.body;
+        const { name, year, budget } = req.body;
         const groupIdNum = parseInt(groupId);
 
         if (!name) {
@@ -28,7 +28,8 @@ export const createSeason = async (req: AuthRequest, res: Response) => {
             data: {
                 groupId: groupIdNum,
                 name,
-                year: year ? parseInt(year) : null,
+                year: year != null ? parseInt(year) : null,
+                budget: budget != null ? parseInt(budget) : null,
                 status: 'DRAFT'
             },
             include: {
@@ -41,7 +42,8 @@ export const createSeason = async (req: AuthRequest, res: Response) => {
         res.status(201).json(season);
     } catch (error: any) {
         console.error('Error creating season:', error);
-        res.status(500).json({ error: 'Failed to create season' });
+        const message = error?.message || 'Failed to create season';
+        res.status(500).json({ error: 'Failed to create season', details: message });
     }
 };
 
@@ -120,16 +122,18 @@ export const getSeasonById = async (req: AuthRequest, res: Response) => {
 export const updateSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, year, status } = req.body;
+        const { name, year, budget, status } = req.body;
         const seasonId = parseInt(id);
+
+        const updateData: Record<string, any> = {};
+        if (name !== undefined) updateData.name = name;
+        if (year !== undefined) updateData.year = year != null ? parseInt(year) : null;
+        if (budget !== undefined) updateData.budget = budget != null ? parseInt(budget) : null;
+        if (status !== undefined) updateData.status = status;
 
         const season = await prisma.season.update({
             where: { id: seasonId },
-            data: {
-                name,
-                year: year ? parseInt(year) : undefined,
-                status
-            }
+            data: updateData
         });
 
         res.json(season);
@@ -177,7 +181,8 @@ export const cloneSeason = async (req: AuthRequest, res: Response) => {
             include: {
                 group: true,
                 teams: true,
-                seasonPlayers: true
+                seasonPlayers: true,
+                seasonOwners: true
             }
         });
 
@@ -191,9 +196,20 @@ export const cloneSeason = async (req: AuthRequest, res: Response) => {
                 groupId: sourceSeason.groupId,
                 name,
                 year: sourceSeason.year ? sourceSeason.year + 1 : null,
+                budget: sourceSeason.budget,
                 status: 'DRAFT'
             }
         });
+
+        // Clone season owners (same owners participate in cloned season)
+        for (const so of sourceSeason.seasonOwners) {
+            await prisma.seasonOwner.create({
+                data: {
+                    seasonId: newSeason.id,
+                    userId: so.userId
+                }
+            });
+        }
 
         // Clone teams
         const teamMap = new Map<number, number>(); // old team id -> new team id

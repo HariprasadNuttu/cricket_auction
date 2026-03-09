@@ -5,6 +5,12 @@
   overflow: hidden;
 }
 
+.admin-layout > .d-flex {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .navbar {
   flex-shrink: 0;
   padding: 1rem;
@@ -24,6 +30,8 @@
   transition: width 0.3s ease;
   overflow-y: auto;
   flex-shrink: 0;
+  display: block;
+  position: relative;
 }
 
 .sidebar.collapsed {
@@ -74,8 +82,10 @@
 
 .main-content {
   flex: 1;
+  min-height: 0;
   padding: 2rem;
   overflow-y: auto;
+  overflow-x: hidden;
   background-color: #f8f9fa;
 }
 

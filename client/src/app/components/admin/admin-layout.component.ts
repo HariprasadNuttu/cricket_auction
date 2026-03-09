@@ -21,10 +21,19 @@ export class AdminLayoutComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Redirect non-admins
-    if (this.user?.role !== 'ADMIN') {
+    // Check current user immediately
+    const currentUser = this.user;
+    if (currentUser && currentUser.role !== 'ADMIN') {
       this.router.navigate(['/dashboard']);
+      return;
     }
+    
+    // Also subscribe for user changes
+    this.authService.user$.subscribe(user => {
+      if (user && user.role !== 'ADMIN') {
+        this.router.navigate(['/dashboard']);
+      }
+    });
   }
 
   toggleSidebar() {

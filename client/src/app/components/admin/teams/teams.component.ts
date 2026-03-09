@@ -19,15 +19,22 @@ export class TeamsComponent implements OnInit {
   showCreateModal = false;
   showEditModal = false;
   showAssignOwnerModal = false;
+  showCreateOwnerModal = false;
   selectedTeam: any = null;
   formData = {
     name: '',
-    budget: 1000
+    budget: 1000,
+    ownerId: null as number | null
   };
   assignOwnerData = {
     ownerId: null as number | null
   };
-  owners: any[] = []; // Will load users with OWNER role
+  ownerFormData = {
+    name: '',
+    email: '',
+    password: ''
+  };
+  owners: any[] = []; // Season-scoped owners (only for selected season)
 
   constructor(
     private apiService: ApiService,
@@ -97,7 +104,6 @@ export class TeamsComponent implements OnInit {
     this.apiService.getTeamsBySeason(this.selectedSeasonId).subscribe({
       next: (data) => {
         this.teams = data.teams || data || [];
-        // Load owners list for assignment
         this.loadOwners();
       },
       error: (e) => {
@@ -107,10 +113,16 @@ export class TeamsComponent implements OnInit {
   }
 
   loadOwners() {
-    // TODO: Create API endpoint to get users with OWNER role
-    // For now, we'll use a placeholder
-    // In real implementation, call: GET /api/users?role=OWNER
-    this.owners = []; // Placeholder
+    if (!this.selectedSeasonId) return;
+    this.apiService.getSeasonOwners(this.selectedSeasonId).subscribe({
+      next: (data) => {
+        this.owners = Array.isArray(data) ? data : (data.owners || []);
+      },
+      error: (e) => {
+        console.error('Failed to load owners:', e);
+        this.owners = [];
+      }
+    });
   }
 
   openCreateModal() {
@@ -118,18 +130,62 @@ export class TeamsComponent implements OnInit {
       alert('Please select a season first');
       return;
     }
+    if (this.owners.length === 0) {
+      alert('Add at least one owner to this season before creating teams.');
+      return;
+    }
     this.formData = {
       name: '',
-      budget: 1000
+      budget: 1000,
+      ownerId: this.owners[0]?.id ?? null
     };
     this.showCreateModal = true;
+  }
+
+  openCreateOwnerModal() {
+    if (!this.selectedSeasonId) {
+      alert('Please select a season first');
+      return;
+    }
+    this.ownerFormData = { name: '', email: '', password: '' };
+    this.showCreateOwnerModal = true;
+  }
+
+  createOwner() {
+    if (!this.selectedSeasonId || !this.ownerFormData.name.trim() || !this.ownerFormData.email.trim() || !this.ownerFormData.password) {
+      alert('Name, email and password are required');
+      return;
+    }
+    this.apiService.addSeasonOwner(this.selectedSeasonId, {
+      name: this.ownerFormData.name,
+      email: this.ownerFormData.email,
+      password: this.ownerFormData.password
+    }).subscribe({
+      next: () => {
+        this.showCreateOwnerModal = false;
+        this.loadOwners();
+      },
+      error: (e) => {
+        const msg = e.error?.details || e.error?.error || 'Failed to add owner';
+        alert(msg);
+      }
+    });
+  }
+
+  removeOwner(owner: any) {
+    if (!this.selectedSeasonId || !confirm(`Remove ${owner.name} from this season?`)) return;
+    this.apiService.removeSeasonOwner(this.selectedSeasonId, owner.id).subscribe({
+      next: () => this.loadOwners(),
+      error: (e) => alert(e.error?.error || 'Failed to remove owner')
+    });
   }
 
   openEditModal(team: any) {
     this.selectedTeam = team;
     this.formData = {
       name: team.name,
-      budget: team.budget || 1000
+      budget: team.totalBudget ?? team.budget ?? 1000,
+      ownerId: team.ownerId ?? null
     };
     this.showEditModal = true;
   }
@@ -146,6 +202,7 @@ export class TeamsComponent implements OnInit {
     this.showCreateModal = false;
     this.showEditModal = false;
     this.showAssignOwnerModal = false;
+    this.showCreateOwnerModal = false;
     this.selectedTeam = null;
   }
 
@@ -154,8 +211,16 @@ export class TeamsComponent implements OnInit {
       alert('Team name is required');
       return;
     }
+    if (!this.formData.ownerId) {
+      alert('Please select an owner');
+      return;
+    }
 
-    this.apiService.createTeam(this.selectedSeasonId, this.formData).subscribe({
+    this.apiService.createTeam(this.selectedSeasonId, {
+      name: this.formData.name,
+      budget: this.formData.budget,
+      ownerId: this.formData.ownerId
+    }).subscribe({
       next: () => {
         this.closeModals();
         this.loadTeams();
@@ -173,7 +238,15 @@ export class TeamsComponent implements OnInit {
       return;
     }
 
-    this.apiService.updateTeam(this.selectedTeam.id, this.formData).subscribe({
+    const updateData: { name: string; budget?: number; ownerId?: number } = {
+      name: this.formData.name,
+      budget: this.formData.budget
+    };
+    if (this.formData.ownerId != null) {
+      updateData.ownerId = this.formData.ownerId;
+    }
+
+    this.apiService.updateTeam(this.selectedTeam.id, updateData).subscribe({
       next: () => {
         this.closeModals();
         this.loadTeams();
