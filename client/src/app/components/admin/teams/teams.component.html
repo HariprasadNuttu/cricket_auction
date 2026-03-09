@@ -55,70 +55,22 @@
     </div>
   </div>
 
-  <!-- Assign Players Before Auction -->
+  <!-- Directly Assigned Players -->
   <div class="card mb-4" *ngIf="selectedSeasonId">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><i class="bi bi-person-plus"></i> Assign Players Before Auction</h5>
-      <a class="btn btn-primary btn-sm" [routerLink]="['/admin/players']" [queryParams]="{ groupId: selectedGroupId }" *ngIf="selectedGroupId">
-        <i class="bi bi-plus-circle"></i> Add Players to Group
-      </a>
+      <h5 class="mb-0"><i class="bi bi-person-check"></i> Directly Assigned Players</h5>
+      <button class="btn btn-primary btn-sm" (click)="openAssignPlayerModal()" [disabled]="teams.length === 0 || availablePlayers.length === 0">
+        <i class="bi bi-person-plus"></i> Assign Player
+      </button>
     </div>
     <div class="card-body">
-      <p class="text-muted small">Assign existing group players to teams before the auction. Enter amount (0 for free) - it will be deducted from the team's remaining budget.</p>
-      
-      <!-- Available Players to Assign -->
-      <h6 class="mt-3">Available Players</h6>
-      <div class="table-responsive" *ngIf="availablePlayers.length > 0">
-        <table class="table table-sm table-bordered">
+      <p class="text-muted small">Players assigned to teams before the auction. Amount is deducted from team's remaining budget.</p>
+      <div class="table-responsive" *ngIf="assignedPlayers.length > 0">
+        <table class="table table-sm table-hover">
           <thead>
             <tr>
               <th>Player</th>
               <th>Category</th>
-              <th>Base Price</th>
-              <th>Amount (₹)</th>
-              <th>Team</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of availablePlayers">
-              <td>{{ p.name }}</td>
-              <td>{{ p.category }}</td>
-              <td>₹{{ p.basePrice || 0 }}</td>
-              <td>
-                <input type="number" class="form-control form-control-sm" style="width: 90px;"
-                  [(ngModel)]="getAssignData(p.id).amount" min="0" placeholder="0">
-              </td>
-              <td>
-                <select class="form-select form-select-sm" style="min-width: 140px;"
-                  [(ngModel)]="getAssignData(p.id).teamId">
-                  <option [ngValue]="null">-- Select Team --</option>
-                  <option *ngFor="let t of teams" [value]="t.id">{{ t.name }} (₹{{ t.remainingBudget || 0 }} left)</option>
-                </select>
-              </td>
-              <td>
-                <button class="btn btn-sm btn-success" (click)="assignPlayer(p)">
-                  <i class="bi bi-check-lg"></i> Assign
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div *ngIf="availablePlayers.length === 0" class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <span>No available players. Add players to the group first (Players screen). Create teams below before assigning.</span>
-        <a class="btn btn-primary" [routerLink]="['/admin/players']" [queryParams]="{ groupId: selectedGroupId }" *ngIf="selectedGroupId">
-          <i class="bi bi-plus-circle"></i> Add Players to Group
-        </a>
-      </div>
-
-      <!-- Already Assigned Players -->
-      <h6 class="mt-4">Directly Assigned Players</h6>
-      <div class="table-responsive" *ngIf="assignedPlayers.length > 0">
-        <table class="table table-sm table-bordered">
-          <thead>
-            <tr>
-              <th>Player</th>
               <th>Team</th>
               <th>Amount</th>
               <th>Action</th>
@@ -127,6 +79,7 @@
           <tbody>
             <tr *ngFor="let sp of assignedPlayers">
               <td>{{ sp.player?.name }}</td>
+              <td>{{ sp.player?.category }}</td>
               <td>{{ sp.team?.name || '-' }}</td>
               <td>₹{{ sp.soldPrice ?? 0 }}</td>
               <td>
@@ -138,9 +91,58 @@
           </tbody>
         </table>
       </div>
-      <p *ngIf="assignedPlayers.length === 0" class="text-muted mb-0">No players directly assigned yet.</p>
+      <div *ngIf="assignedPlayers.length === 0" class="text-muted py-3">
+        No players directly assigned yet. Click "Assign Player" to add.
+      </div>
+      <div *ngIf="availablePlayers.length === 0 && assignedPlayers.length === 0" class="alert alert-info">
+        Add players to the group (Players screen) and create teams below first.
+        <a class="btn btn-sm btn-primary ms-2" [routerLink]="['/admin/players']" [queryParams]="{ groupId: selectedGroupId }" *ngIf="selectedGroupId">
+          <i class="bi bi-plus-circle"></i> Add Players
+        </a>
+      </div>
     </div>
   </div>
+
+  <!-- Assign Player Modal -->
+  <div class="modal fade" [class.show]="showAssignPlayerModal" [style.display]="showAssignPlayerModal ? 'flex' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-person-plus"></i> Assign Player to Team</h5>
+          <button type="button" class="btn-close" (click)="closeAssignPlayerModal()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Select Player *</label>
+              <select class="form-select" [(ngModel)]="assignPlayerForm.playerId" name="playerId">
+                <option [ngValue]="null">-- Select Player --</option>
+                <option *ngFor="let p of availablePlayers" [value]="p.id">{{ p.name }} ({{ p.category }}) - ₹{{ p.basePrice || 0 }}</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Amount (₹) *</label>
+              <input type="number" class="form-control" [(ngModel)]="assignPlayerForm.amount" name="amount" min="0" placeholder="0 for free">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Select Team *</label>
+              <select class="form-select" [(ngModel)]="assignPlayerForm.teamId" name="teamId">
+                <option [ngValue]="null">-- Select Team --</option>
+                <option *ngFor="let t of teams" [value]="t.id">{{ t.name }} (₹{{ t.remainingBudget || 0 }} remaining)</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeAssignPlayerModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="assignPlayerFromModal()">
+            <i class="bi bi-check-lg"></i> Assign Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showAssignPlayerModal" [style.display]="showAssignPlayerModal ? 'block' : 'none'" (click)="closeAssignPlayerModal()"></div>
 
   <!-- Teams Table -->
   <div class="card" *ngIf="selectedSeasonId">

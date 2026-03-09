@@ -29,13 +29,14 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
         }
 
         const assignAmount = parseInt(amount) || 0;
+        const teamIdNum = parseInt(teamId);
 
         let seasonPlayer;
 
         if (seasonPlayerId) {
             // Use existing season player
             seasonPlayer = await prisma.seasonPlayer.findUnique({
-                where: { id: seasonPlayerId },
+                where: { id: parseInt(seasonPlayerId) },
                 include: {
                     player: true,
                     season: true
@@ -94,7 +95,7 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
 
         // Get team
         const team = await prisma.team.findUnique({
-            where: { id: teamId }
+            where: { id: teamIdNum }
         });
 
         if (!team) {
@@ -129,13 +130,13 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
                     soldPrice: assignAmount,
                     soldType: 'DIRECT_ASSIGN',
                     soldAt: new Date(),
-                    teamId: teamId
+                    teamId: teamIdNum
                 }
             });
 
             // Update team (budget and player count)
             await tx.team.update({
-                where: { id: teamId },
+                where: { id: teamIdNum },
                 data: {
                     remainingBudget: assignAmount > 0 ? { decrement: assignAmount } : undefined,
                     totalPlayers: { increment: 1 }
@@ -148,7 +149,7 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
                     seasonId: seasonIdNum,
                     eventType: 'player_direct_assign',
                     userId: req.user?.userId || null,
-                    teamId: teamId,
+                    teamId: teamIdNum,
                     playerId: seasonPlayer.playerId,
                     amount: assignAmount,
                     details: JSON.stringify({
@@ -164,7 +165,7 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
         res.json({ 
             message: 'Player assigned successfully',
             seasonPlayerId: seasonPlayer.id,
-            teamId: teamId,
+            teamId: teamIdNum,
             amount: assignAmount
         });
     } catch (error: any) {

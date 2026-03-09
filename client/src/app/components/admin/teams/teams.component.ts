@@ -20,6 +20,7 @@ export class TeamsComponent implements OnInit {
   showEditModal = false;
   showAssignOwnerModal = false;
   showCreateOwnerModal = false;
+  showAssignPlayerModal = false;
   selectedTeam: any = null;
   formData = {
     name: '',
@@ -37,7 +38,11 @@ export class TeamsComponent implements OnInit {
   owners: any[] = []; // Season-scoped owners (only for selected season)
   seasonPlayers: any[] = []; // Season players (for assigned list)
   groupPlayers: any[] = []; // Group players (for assign - already created players)
-  assignData: { [key: number]: { teamId: number | null; amount: number } } = {}; // Per-player assign form (key = playerId)
+  assignPlayerForm = {
+    playerId: null as number | null,
+    teamId: null as number | null,
+    amount: 0
+  };
 
   constructor(
     private apiService: ApiService,
@@ -245,7 +250,51 @@ export class TeamsComponent implements OnInit {
     this.showEditModal = false;
     this.showAssignOwnerModal = false;
     this.showCreateOwnerModal = false;
+    this.showAssignPlayerModal = false;
     this.selectedTeam = null;
+  }
+
+  openAssignPlayerModal() {
+    this.assignPlayerForm = {
+      playerId: this.availablePlayers[0]?.id ?? null,
+      teamId: this.teams[0]?.id ?? null,
+      amount: 0
+    };
+    this.showAssignPlayerModal = true;
+  }
+
+  closeAssignPlayerModal() {
+    this.showAssignPlayerModal = false;
+  }
+
+  assignPlayerFromModal() {
+    if (!this.selectedSeasonId) return;
+    const { playerId, teamId, amount } = this.assignPlayerForm;
+    if (!playerId || !teamId) {
+      alert('Please select a player and team');
+      return;
+    }
+    const amountNum = parseInt(String(amount), 10) || 0;
+    const team = this.teams.find((t: any) => t.id === teamId);
+    if (team && amountNum > 0 && (team.remainingBudget || 0) < amountNum) {
+      alert(`Insufficient budget. ${team.name} has ₹${team.remainingBudget || 0} remaining.`);
+      return;
+    }
+    this.apiService.directAssignPlayer(this.selectedSeasonId, {
+      playerId,
+      teamId,
+      amount: amountNum
+    }).subscribe({
+      next: () => {
+        this.closeAssignPlayerModal();
+        this.loadTeams();
+        this.loadSeasonPlayers();
+        this.loadGroupPlayers();
+      },
+      error: (e) => {
+        alert(e.error?.error || 'Failed to assign player');
+      }
+    });
   }
 
   createTeam() {
@@ -330,43 +379,6 @@ export class TeamsComponent implements OnInit {
       error: (e) => {
         console.error('Failed to delete team:', e);
         alert(e.error?.message || 'Failed to delete team');
-      }
-    });
-  }
-
-  getAssignData(playerId: number) {
-    if (!this.assignData[playerId]) {
-      this.assignData[playerId] = { teamId: this.teams[0]?.id ?? null, amount: 0 };
-    }
-    return this.assignData[playerId];
-  }
-
-  assignPlayer(player: any) {
-    if (!this.selectedSeasonId || !player) return;
-    const data = this.getAssignData(player.id);
-    if (!data.teamId) {
-      alert('Please select a team');
-      return;
-    }
-    const amount = parseInt(String(data.amount), 10) || 0;
-    const team = this.teams.find((t: any) => t.id === data.teamId);
-    if (team && amount > 0 && (team.remainingBudget || 0) < amount) {
-      alert(`Insufficient budget. ${team.name} has ₹${team.remainingBudget || 0} remaining.`);
-      return;
-    }
-    this.apiService.directAssignPlayer(this.selectedSeasonId, {
-      playerId: player.id,
-      teamId: data.teamId,
-      amount
-    }).subscribe({
-      next: () => {
-        this.loadTeams();
-        this.loadSeasonPlayers();
-        this.loadGroupPlayers();
-        delete this.assignData[player.id];
-      },
-      error: (e) => {
-        alert(e.error?.error || 'Failed to assign player');
       }
     });
   }
