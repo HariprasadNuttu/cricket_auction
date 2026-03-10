@@ -19,7 +19,7 @@ interface LoginResponse {
 })
 export class AuthService {
   // Proxied by Nginx
-  private apiUrl = 'http://localhost:4200/api/auth';
+  private apiUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/auth` : 'http://localhost:4200/api/auth';
   private accessTokenKey = 'accessToken';
 
   private userSubject = new BehaviorSubject<User | null>(null);

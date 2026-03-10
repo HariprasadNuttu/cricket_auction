@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'http://localhost:4200/api';
+  private apiUrl = typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:4200/api';
 
   constructor(
     private http: HttpClient,

@@ -407,8 +407,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getPlayerImageUrl(url: string | null | undefined): string {
     if (!url) return '';
-    if (url.startsWith('http') || url.startsWith('/')) return url;
-    return `/api/uploads/${url}`;
+    if (url.startsWith('http')) return url;
+    return url.startsWith('/') ? url : `/api/uploads/${url}`;
+  }
+
+  onPlayerImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.style.display = 'none';
+      const next = img.nextElementSibling as HTMLElement;
+      if (next) next.style.display = 'block';
+    }
   }
 
   getPlayerName(item: any): string {

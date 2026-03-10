@@ -11,3 +11,137 @@ app-root {
     display: block;
     height: 100%;
 }
+
+/* Premium Bid Buttons - Fully circular, premium look, responsive */
+.btn-bid-premium {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+.btn-bid-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.btn-bid-premium:hover:not(:disabled) {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+.btn-bid-premium:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-bid-premium:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-bid-success {
+  background: linear-gradient(145deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-bid-success:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.5);
+}
+
+.btn-bid-primary {
+  background: linear-gradient(145deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.btn-bid-primary:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.5);
+}
+
+.btn-bid-outline {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  color: #2563eb;
+  border: 2px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+.btn-bid-outline:hover:not(:disabled) {
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #2563eb;
+  color: #1d4ed8;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
+}
+
+.bid-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  justify-items: center;
+}
+@media (max-width: 575px) {
+  .bid-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+}
+
+.bid-custom-input {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+.bid-custom-input .form-control-premium {
+  flex: 1;
+  min-width: 100px;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  border: 2px solid #dee2e6;
+  font-size: 1rem;
+}
+.bid-custom-input .form-control-premium:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2);
+  outline: none;
+}
+.bid-custom-input .btn-bid-premium {
+  flex-shrink: 0;
+  width: auto;
+  min-width: 52px;
+  padding: 0 1rem;
+  border-radius: 9999px;
+}
+
+.team-bid-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+.team-bid-buttons .btn-bid-premium {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 0.8rem;
+}
+@media (min-width: 576px) {
+  .team-bid-buttons .btn-bid-premium {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 0.85rem;
+  }
+}
