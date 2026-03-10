@@ -3,15 +3,48 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Player names from user (64 players) - using BATSMAN and basePrice 20 as defaults
+const PLAYER_NAMES = [
+    'Harsha', 'Rajesh', 'Chinnaro', 'Nivas',
+    'Praveen', 'Rabada', 'Prakash', 'Vijay',
+    'Hari', 'Sai Prabha', 'Anil', 'Satya',
+    'Manoj', 'Santhosh', 'Naidu', 'Akhil',
+    'Chandiu (owner)', 'Srinu', 'Rajsekhar', 'Manish',
+    'Rahul', 'Gopi Dancer', 'Appanna', 'Surendra',
+    'Chandrasekhar', 'Dileep', 'Ch.Naveen', 'Vasu',
+    'Gopi ( electrical dept )', 'Ravi', 'Srikanth', 'Ramesh',
+    'peeru', 'Khilana', 'Naresh', 'Gopikrishna',
+    'Naveen', 'Jagga', 'Somesh Anna', 'Shankar Rahul Friend',
+    'KP', 'Rajesh Jr', 'Ananth', 'Amith',
+    'Sekhar Master', 'Suresh', 'Raja', 'Sunny',
+    'Barri Venkat', 'Venu', 'Raghava', 'Sai Kiran',
+    'Ganesh', 'Aravind', 'Bablu', 'Yeshwanth',
+    'Mani', 'mahesh', 'Veeraraj', 'Ashok',
+    'Prasanth', 'Srikar', 'Divakar', 'Ravi ( Divakar )'
+];
+
 async function main() {
     console.log('🌱 Starting seed...\n');
 
+    // 0. Drop all existing data (in correct order for FK constraints)
+    console.log('🗑️  Clearing existing data...');
+    await prisma.bidLog.deleteMany();
+    await prisma.auctionLog.deleteMany();
+    await prisma.auctionState.deleteMany();
+    await prisma.seasonPlayer.deleteMany();
+    await prisma.team.deleteMany();
+    await prisma.seasonOwner.deleteMany();
+    await prisma.auctionRoom.deleteMany();
+    await prisma.season.deleteMany();
+    await prisma.player.deleteMany();
+    await prisma.group.deleteMany();
+    await prisma.user.deleteMany();
+    console.log('✅ Data cleared');
+
     // 1. Create Admin User
-    console.log('👤 Creating admin user...');
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@auction.com' },
-        update: {},
-        create: {
+    console.log('\n👤 Creating admin user...');
+    const admin = await prisma.user.create({
+        data: {
             email: 'admin@auction.com',
             password: await bcrypt.hash('admin123', 10),
             name: 'Admin User',
@@ -21,41 +54,34 @@ async function main() {
     console.log('✅ Admin created:', admin.email);
 
     // 2. Create Group
-    console.log('\n📦 Creating default group...');
-    const group = await prisma.group.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
-            id: 1,
-            name: 'Cricket Lovers League',
-            description: 'Default cricket league for auction',
+    console.log('\n📦 Creating group...');
+    const group = await prisma.group.create({
+        data: {
+            name: 'Cricket Loevers Srikakulam',
+            description: 'Cricket Loevers Srikakulam League',
             createdById: admin.id
         }
     });
     console.log('✅ Group created:', group.name);
 
     // 3. Create Season
-    console.log('\n📅 Creating default season...');
-    const season = await prisma.season.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
-            id: 1,
+    console.log('\n📅 Creating season...');
+    const season = await prisma.season.create({
+        data: {
             groupId: group.id,
-            name: '2026 Season',
+            name: 'Season 4',
             year: 2026,
             status: 'DRAFT',
-            auctionStarted: false
+            auctionStarted: false,
+            budget: 2000
         }
     });
     console.log('✅ Season created:', season.name);
 
-    // 3a. Create Auctioneer User
+    // 4. Create Auctioneer User
     console.log('\n🔨 Creating auctioneer user...');
-    const auctioneer = await prisma.user.upsert({
-        where: { email: 'auctioneer@auction.com' },
-        update: {},
-        create: {
+    const auctioneer = await prisma.user.create({
+        data: {
             email: 'auctioneer@auction.com',
             password: await bcrypt.hash('auctioneer123', 10),
             name: 'Auctioneer User',
@@ -64,16 +90,14 @@ async function main() {
     });
     console.log('✅ Auctioneer created:', auctioneer.email);
 
-    // 3b. Assign auctioneer to season and create Auction Room
-    console.log('\n🏠 Assigning auctioneer to season and creating auction room...');
+    // 5. Assign auctioneer to season and create Auction Room
+    console.log('\n🏠 Creating auction room...');
     await prisma.season.update({
         where: { id: season.id },
         data: { auctioneerId: auctioneer.id }
     });
-    await prisma.auctionRoom.upsert({
-        where: { seasonId: season.id },
-        update: {},
-        create: {
+    await prisma.auctionRoom.create({
+        data: {
             seasonId: season.id,
             auctioneerId: auctioneer.id,
             name: `${season.name} - ${group.name}`,
@@ -82,21 +106,19 @@ async function main() {
     });
     console.log('✅ Auction room created');
 
-    // 4. Create Owner Users and Teams
+    // 6. Create Owner Users and Teams
     console.log('\n👥 Creating owners and teams...');
     const teamData = [
-        { name: 'Mumbai Indians', ownerEmail: 'owner1@auction.com', ownerName: 'Ravi Kumar' },
-        { name: 'Chennai Super Kings', ownerEmail: 'owner2@auction.com', ownerName: 'Suresh Reddy' },
-        { name: 'Royal Challengers', ownerEmail: 'owner3@auction.com', ownerName: 'Kiran Sharma' },
-        { name: 'Delhi Capitals', ownerEmail: 'owner4@auction.com', ownerName: 'Priya Patel' }
+        { name: 'Mahesh team', ownerEmail: 'mahesh@owner.com', ownerName: 'Mahesh' },
+        { name: 'Naveen', ownerEmail: 'naveen@owner.com', ownerName: 'Naveen' },
+        { name: 'Manoj Team', ownerEmail: 'manoju@owner.com', ownerName: 'Manoju' },
+        { name: 'Vasu Team', ownerEmail: 'vasu@owner.com', ownerName: 'Vasu' }
     ];
 
     const teams = [];
     for (const teamInfo of teamData) {
-        const owner = await prisma.user.upsert({
-            where: { email: teamInfo.ownerEmail },
-            update: {},
-            create: {
+        const owner = await prisma.user.create({
+            data: {
                 email: teamInfo.ownerEmail,
                 password: await bcrypt.hash('owner123', 10),
                 name: teamInfo.ownerName,
@@ -104,15 +126,15 @@ async function main() {
             }
         });
 
-        const team = await prisma.team.upsert({
-            where: { 
-                seasonId_name: {
-                    seasonId: season.id,
-                    name: teamInfo.name
-                }
-            },
-            update: {},
-            create: {
+        await prisma.seasonOwner.create({
+            data: {
+                seasonId: season.id,
+                userId: owner.id
+            }
+        });
+
+        const team = await prisma.team.create({
+            data: {
                 seasonId: season.id,
                 name: teamInfo.name,
                 ownerId: owner.id,
@@ -125,73 +147,16 @@ async function main() {
         console.log(`✅ Team created: ${team.name} (Owner: ${owner.name})`);
     }
 
-    // 5. Create Players (Group level)
+    // 7. Create Players (Group level)
     console.log('\n🏏 Creating players...');
-    const playersData = [
-        // Batsmen
-        { name: 'Virat Kohli', category: PlayerCategory.BATSMAN, basePrice: 50 },
-        { name: 'Rohit Sharma', category: PlayerCategory.BATSMAN, basePrice: 50 },
-        { name: 'KL Rahul', category: PlayerCategory.BATSMAN, basePrice: 45 },
-        { name: 'Shikhar Dhawan', category: PlayerCategory.BATSMAN, basePrice: 40 },
-        { name: 'Shubman Gill', category: PlayerCategory.BATSMAN, basePrice: 35 },
-        { name: 'Ishan Kishan', category: PlayerCategory.BATSMAN, basePrice: 30 },
-        { name: 'Ruturaj Gaikwad', category: PlayerCategory.BATSMAN, basePrice: 30 },
-        { name: 'Yashasvi Jaiswal', category: PlayerCategory.BATSMAN, basePrice: 25 },
-        { name: 'Tilak Varma', category: PlayerCategory.BATSMAN, basePrice: 25 },
-        { name: 'Rinku Singh', category: PlayerCategory.BATSMAN, basePrice: 20 },
-        
-        // Bowlers
-        { name: 'Jasprit Bumrah', category: PlayerCategory.BOWLER, basePrice: 50 },
-        { name: 'Mohammed Shami', category: PlayerCategory.BOWLER, basePrice: 45 },
-        { name: 'Ravindra Jadeja', category: PlayerCategory.BOWLER, basePrice: 40 },
-        { name: 'Yuzvendra Chahal', category: PlayerCategory.BOWLER, basePrice: 35 },
-        { name: 'Kuldeep Yadav', category: PlayerCategory.BOWLER, basePrice: 35 },
-        { name: 'Arshdeep Singh', category: PlayerCategory.BOWLER, basePrice: 30 },
-        { name: 'Mohammed Siraj', category: PlayerCategory.BOWLER, basePrice: 30 },
-        { name: 'Umran Malik', category: PlayerCategory.BOWLER, basePrice: 25 },
-        { name: 'Avesh Khan', category: PlayerCategory.BOWLER, basePrice: 25 },
-        { name: 'Harshal Patel', category: PlayerCategory.BOWLER, basePrice: 20 },
-        
-        // All-rounders
-        { name: 'Hardik Pandya', category: PlayerCategory.ALLROUNDER, basePrice: 50 },
-        { name: 'Ravindra Jadeja', category: PlayerCategory.ALLROUNDER, basePrice: 45 },
-        { name: 'Axar Patel', category: PlayerCategory.ALLROUNDER, basePrice: 40 },
-        { name: 'Washington Sundar', category: PlayerCategory.ALLROUNDER, basePrice: 35 },
-        { name: 'Shivam Dube', category: PlayerCategory.ALLROUNDER, basePrice: 30 },
-        { name: 'Venkatesh Iyer', category: PlayerCategory.ALLROUNDER, basePrice: 30 },
-        { name: 'Rahul Tewatia', category: PlayerCategory.ALLROUNDER, basePrice: 25 },
-        { name: 'Shahbaz Ahmed', category: PlayerCategory.ALLROUNDER, basePrice: 25 },
-        { name: 'Abhishek Sharma', category: PlayerCategory.ALLROUNDER, basePrice: 20 },
-        { name: 'Nitish Rana', category: PlayerCategory.ALLROUNDER, basePrice: 20 },
-        
-        // Wicket Keepers
-        { name: 'MS Dhoni', category: PlayerCategory.WICKETKEEPER, basePrice: 50 },
-        { name: 'Rishabh Pant', category: PlayerCategory.WICKETKEEPER, basePrice: 45 },
-        { name: 'Dinesh Karthik', category: PlayerCategory.WICKETKEEPER, basePrice: 40 },
-        { name: 'Sanju Samson', category: PlayerCategory.WICKETKEEPER, basePrice: 35 },
-        { name: 'Ishan Kishan', category: PlayerCategory.WICKETKEEPER, basePrice: 30 },
-        { name: 'KL Rahul', category: PlayerCategory.WICKETKEEPER, basePrice: 30 },
-        { name: 'Jitesh Sharma', category: PlayerCategory.WICKETKEEPER, basePrice: 25 },
-        { name: 'Dhruv Jurel', category: PlayerCategory.WICKETKEEPER, basePrice: 25 },
-        { name: 'Prabhsimran Singh', category: PlayerCategory.WICKETKEEPER, basePrice: 20 },
-        { name: 'Abishek Porel', category: PlayerCategory.WICKETKEEPER, basePrice: 20 }
-    ];
-
     const players = [];
-    for (const playerData of playersData) {
-        const player = await prisma.player.upsert({
-            where: {
-                groupId_name: {
-                    groupId: group.id,
-                    name: playerData.name
-                }
-            },
-            update: {},
-            create: {
+    for (const name of PLAYER_NAMES) {
+        const player = await prisma.player.create({
+            data: {
                 groupId: group.id,
-                name: playerData.name,
-                category: playerData.category,
-                basePrice: playerData.basePrice,
+                name: name.trim(),
+                category: PlayerCategory.BATSMAN,
+                basePrice: 20,
                 status: PlayerStatus.ACTIVE
             }
         });
@@ -199,34 +164,24 @@ async function main() {
     }
     console.log(`✅ Created ${players.length} players`);
 
-    // 6. Create SeasonPlayer entries (link players to season)
+    // 8. Create SeasonPlayer entries (link players to season)
     console.log('\n🔗 Creating SeasonPlayer entries...');
     for (const player of players) {
-        await prisma.seasonPlayer.upsert({
-            where: {
-                seasonId_playerId: {
-                    seasonId: season.id,
-                    playerId: player.id
-                }
-            },
-            update: {},
-            create: {
+        await prisma.seasonPlayer.create({
+            data: {
                 seasonId: season.id,
                 playerId: player.id,
                 status: PlayerStatus.ACTIVE,
-                soldType: null // No direct assignment initially
+                soldType: null
             }
         });
     }
     console.log(`✅ Created ${players.length} SeasonPlayer entries`);
 
-    // 7. Create AuctionState for season
+    // 9. Create AuctionState for season
     console.log('\n⏱️  Creating auction state...');
-    await prisma.auctionState.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
-            id: 1,
+    await prisma.auctionState.create({
+        data: {
             seasonId: season.id,
             status: 'READY',
             currentPrice: 0,
@@ -235,12 +190,10 @@ async function main() {
     });
     console.log('✅ AuctionState created');
 
-    // 8. Create Viewer User
+    // 10. Create Viewer User
     console.log('\n👁️  Creating viewer user...');
-    await prisma.user.upsert({
-        where: { email: 'viewer@auction.com' },
-        update: {},
-        create: {
+    await prisma.user.create({
+        data: {
             email: 'viewer@auction.com',
             password: await bcrypt.hash('viewer123', 10),
             name: 'Viewer User',
@@ -255,14 +208,13 @@ async function main() {
     console.log(`   - Season: ${season.name}`);
     console.log(`   - Teams: ${teams.length}`);
     console.log(`   - Players: ${players.length}`);
-    console.log(`   - SeasonPlayers: ${players.length}`);
     console.log('\n🔑 Login Credentials:');
     console.log('   Admin: admin@auction.com / admin123');
     console.log('   Auctioneer: auctioneer@auction.com / auctioneer123');
-    console.log('   Owner 1: owner1@auction.com / owner123');
-    console.log('   Owner 2: owner2@auction.com / owner123');
-    console.log('   Owner 3: owner3@auction.com / owner123');
-    console.log('   Owner 4: owner4@auction.com / owner123');
+    console.log('   Mahesh: mahesh@owner.com / owner123');
+    console.log('   Naveen: naveen@owner.com / owner123');
+    console.log('   Manoju: manoju@owner.com / owner123');
+    console.log('   Vasu: vasu@owner.com / owner123');
     console.log('   Viewer: viewer@auction.com / viewer123');
 }
 

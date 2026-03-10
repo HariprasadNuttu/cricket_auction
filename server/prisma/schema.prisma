@@ -160,6 +160,7 @@ model Player {
   category   PlayerCategory
   basePrice  Int            @default(20)
   country    String?
+  imageUrl   String?        // URL for player profile image during auction
   status     PlayerStatus   @default(ACTIVE)
   
   createdAt  DateTime       @default(now())

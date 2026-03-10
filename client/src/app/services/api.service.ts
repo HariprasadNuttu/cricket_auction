@@ -173,8 +173,8 @@ export class ApiService {
     return this.http.get<any>(`${this.apiUrl}/auction/seasons/${seasonId}/state`, { headers: this.getHeaders() });
   }
 
-  startAuction(seasonId: number, playerId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/start`, { playerId }, { headers: this.getHeaders() });
+  startAuction(seasonId: number, seasonPlayerId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/start`, { seasonPlayerId }, { headers: this.getHeaders() });
   }
 
   startRandomAuction(seasonId: number): Observable<any> {

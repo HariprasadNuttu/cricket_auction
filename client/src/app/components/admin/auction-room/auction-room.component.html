@@ -1,27 +1,36 @@
 <div class="auction-room-container">
   <h2 class="mb-4">Auction Room</h2>
 
-  <!-- Group and Season Selectors -->
-  <div class="row mb-4">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-body">
-          <label class="form-label">Select Group:</label>
-          <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
-            <option [value]="null">-- Select Group --</option>
-            <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
-          </select>
-        </div>
+  <!-- Group and Season: Text for Auctioneer, Dropdowns for Admin -->
+  <div class="mb-4">
+    <div class="card" *ngIf="user?.role === 'AUCTIONEER' && selectedGroupId && selectedSeasonId">
+      <div class="card-body py-2">
+        <span class="text-muted">Group:</span> <strong>{{ getGroupName() }}</strong>
+        <span class="mx-2">|</span>
+        <span class="text-muted">Season:</span> <strong>{{ getSeasonName() }}</strong>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-body">
-          <label class="form-label">Select Season:</label>
-          <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
-            <option [value]="null">-- Select Season --</option>
-            <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
-          </select>
+    <div class="row" *ngIf="user?.role !== 'AUCTIONEER'">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <label class="form-label">Select Group:</label>
+            <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
+              <option [value]="null">-- Select Group --</option>
+              <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <label class="form-label">Select Season:</label>
+            <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
+              <option [value]="null">-- Select Season --</option>
+              <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -75,6 +84,7 @@
           Current Player
         </div>
         <div class="card-body text-center">
+          <img *ngIf="currentPlayer?.imageUrl" [src]="currentPlayer.imageUrl" alt="{{ currentPlayer.name }}" class="player-auction-image mb-2">
           <h3>{{ currentPlayer?.name }}</h3>
           <p class="badge bg-secondary">{{ currentPlayer?.category }}</p>
           <h4>Base Price: {{ currentPlayer?.basePrice }}</h4>
@@ -156,11 +166,11 @@
         <tbody>
           <tr *ngFor="let team of teams">
             <td><strong>{{ team.name }}</strong></td>
-            <td>₹{{ team.budget || 0 }}</td>
-            <td [ngClass]="{'text-danger': team.remainingBudget < 1000, 'text-success': team.remainingBudget >= 5000}">
-              ₹{{ team.remainingBudget || 0 }}
+            <td>₹{{ team.totalBudget ?? team.budget ?? 0 }}</td>
+            <td [ngClass]="{'text-danger': (team.remainingBudget ?? 0) < 1000, 'text-success': (team.remainingBudget ?? 0) >= 5000}">
+              ₹{{ team.remainingBudget ?? 0 }}
             </td>
-            <td>{{ team.playerCount || 0 }}</td>
+            <td>{{ team.totalPlayers ?? team.playerCount ?? 0 }}</td>
           </tr>
         </tbody>
       </table>

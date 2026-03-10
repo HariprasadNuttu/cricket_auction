@@ -28,6 +28,8 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
   timerInterval: any = null;
   selectedGroupId: number | null = null;
   selectedSeasonId: number | null = null;
+  currentSeason: any = null;
+  currentGroup: any = null;
 
   private subs: Subscription = new Subscription();
 
@@ -185,8 +187,23 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.auctionState = data.state;
         this.teams = data.teams || [];
+        this.currentSeason = data.season;
+        this.currentGroup = data.season?.group;
         this.players = data.players || [];
-        this.currentPlayer = data.currentPlayer;
+        if (!this.players.length && data.seasonPlayers) {
+          this.players = data.seasonPlayers.map((sp: any) => ({
+            id: sp.id,
+            name: sp.player?.name,
+            category: sp.player?.category,
+            basePrice: sp.player?.basePrice,
+            imageUrl: sp.player?.imageUrl,
+            status: sp.status,
+            soldPrice: sp.soldPrice,
+            team: sp.team,
+            teamName: sp.team?.name
+          }));
+        }
+        this.currentPlayer = data.currentPlayer || data.currentSeasonPlayer?.player;
         this.bidHistory = data.bidHistory || [];
         this.startTimerMonitoring();
       },
@@ -222,6 +239,14 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
         this.timer = '00:00';
       }
     }, 1000);
+  }
+
+  getGroupName(): string {
+    return this.currentGroup?.name || this.groups.find(g => g.id === this.selectedGroupId)?.name || 'Group';
+  }
+
+  getSeasonName(): string {
+    return this.currentSeason?.name || this.seasons.find(s => s.id === this.selectedSeasonId)?.name || 'Season';
   }
 
   onTimerExpired() {
@@ -317,8 +342,9 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     this.apiService.startRandomAuction(this.selectedSeasonId).subscribe({
       next: (response: any) => {
         console.log('Random player selected:', response);
-        if (response.playerId) {
-          this.startAuction(response.playerId);
+        const seasonPlayerId = response.seasonPlayerId ?? response.playerId;
+        if (seasonPlayerId) {
+          this.startAuction(seasonPlayerId);
         } else {
           alert('No active players available for auction.');
         }

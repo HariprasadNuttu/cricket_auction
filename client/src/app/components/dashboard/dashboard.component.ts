@@ -372,8 +372,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.apiService.startRandomAuction(this.selectedSeasonId).subscribe({
       next: (response: any) => {
         console.log('Random player selected:', response);
-        if (response.playerId) {
-          this.startAuction(response.playerId);
+        const seasonPlayerId = response.seasonPlayerId ?? response.playerId;
+        if (seasonPlayerId) {
+          this.startAuction(seasonPlayerId);
         } else {
           alert('No active players available for auction.');
         }

@@ -19,3 +19,11 @@
 .gap-3 {
   gap: 1rem;
 }
+
+.player-auction-image {
+  max-width: 120px;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  border: 2px solid #dee2e6;
+}

@@ -20,7 +20,7 @@ export const uploadMiddleware = upload.single('file');
 export const addPlayerToGroup = async (req: AuthRequest, res: Response) => {
     try {
         const { groupId } = req.params;
-        const { name, category, basePrice, country } = req.body;
+        const { name, category, basePrice, country, imageUrl } = req.body;
         const groupIdNum = parseInt(groupId);
 
         if (!name || !category || !basePrice) {
@@ -45,6 +45,7 @@ export const addPlayerToGroup = async (req: AuthRequest, res: Response) => {
                 category,
                 basePrice: parseInt(basePrice),
                 country: country || null,
+                imageUrl: imageUrl || null,
                 status: 'ACTIVE'
             }
         });
@@ -160,18 +161,20 @@ export const getPlayersByGroup = async (req: AuthRequest, res: Response) => {
 export const updatePlayer = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, category, basePrice, country, status } = req.body;
+        const { name, category, basePrice, country, status, imageUrl } = req.body;
         const playerId = parseInt(id);
+
+        const data: Record<string, any> = {};
+        if (name !== undefined) data.name = name;
+        if (category !== undefined) data.category = category;
+        if (basePrice !== undefined) data.basePrice = parseInt(basePrice);
+        if (country !== undefined) data.country = country;
+        if (status !== undefined) data.status = status;
+        if (imageUrl !== undefined) data.imageUrl = imageUrl || null;
 
         const player = await prisma.player.update({
             where: { id: playerId },
-            data: {
-                name,
-                category,
-                basePrice: basePrice ? parseInt(basePrice) : undefined,
-                country,
-                status
-            }
+            data
         });
 
         res.json(player);
