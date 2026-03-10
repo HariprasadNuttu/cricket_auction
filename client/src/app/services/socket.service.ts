@@ -1,21 +1,18 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Observable } from 'rxjs';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SocketService {
   private socket: Socket;
-  // In Docker/Nginx, /socket.io is proxied to backend. 
-  // If we leave URL empty, it uses window.location derived path.
-  // But our Nginx listens on 4200 (mapped to 80).
-  private readonly URL = 'http://localhost:4200';
+  // In Docker/Nginx, /socket.io is proxied to backend.
+  private readonly URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4200';
 
-  constructor() {
-    // Get token from localStorage (avoiding circular dependency)
-    const token = localStorage.getItem('accessToken');
-    
+  constructor(private authService: AuthService) {
+    const token = this.authService.getAccessToken();
     this.socket = io(this.URL, {
       withCredentials: true,
       autoConnect: false,
@@ -29,6 +26,10 @@ export class SocketService {
 
   connect() {
     if (!this.socket.connected) {
+      const token = this.authService.getAccessToken();
+      if (token) {
+        this.socket.auth = { token };
+      }
       this.socket.connect();
     }
   }

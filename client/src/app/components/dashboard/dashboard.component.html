@@ -11,38 +11,6 @@
         <span class="group-season-label">Season:</span> <span>--</span>
     </div>
 
-    <!-- Owner: Place Your Bid - Top bar (single instance, mobile-first) -->
-    <div class="owner-bid-bar" *ngIf="user?.role === 'OWNER' && selectedSeasonId">
-        <div class="owner-bid-bar-inner">
-            <div class="owner-bid-label">
-                <i class="bi bi-cash-stack"></i>
-                <span>Place Your Bid</span>
-                <span class="owner-bid-status" *ngIf="!auctionState || auctionState.status !== 'LIVE'">Auction not live</span>
-            </div>
-            <div class="owner-bid-controls">
-                <div class="bid-buttons-grid owner-bid-grid">
-                    <button class="btn-bid-premium btn-bid-success" 
-                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 10)"
-                        (click)="placeBidAsOwner(auctionState.currentPrice + 10)">+10</button>
-                    <button class="btn-bid-premium btn-bid-success" 
-                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 20)"
-                        (click)="placeBidAsOwner(auctionState.currentPrice + 20)">+20</button>
-                    <button class="btn-bid-premium btn-bid-success" 
-                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 30)"
-                        (click)="placeBidAsOwner(auctionState.currentPrice + 30)">+30</button>
-                    <button class="btn-bid-premium btn-bid-success" 
-                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
-                        (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
-                </div>
-                <div class="bid-custom-input owner-custom-bid d-none d-md-flex">
-                    <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
-                    <button class="btn-bid-premium btn-bid-primary" [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
-                </div>
-                <small class="owner-bid-min d-none d-md-inline" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
-            </div>
-        </div>
-    </div>
-
     <div class="row">
         <!-- Admin Actions - Top Section -->
         <div class="col-12 mb-3" *ngIf="user?.role === 'ADMIN'">
@@ -103,6 +71,22 @@
                     <p *ngIf="auctionState?.timerEndsAt && auctionState?.status === 'LIVE'" class="mt-1">
                         <small class="text-muted">Ends: {{ auctionState.timerEndsAt | date:'mediumTime' }}</small>
                     </p>
+                    
+                    <!-- Owner: Quick bid buttons only -->
+                    <div class="owner-bid-buttons" *ngIf="user?.role === 'OWNER' && selectedSeasonId">
+                        <button class="btn-bid-premium btn-bid-success"
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 10)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 10)">+10</button>
+                        <button class="btn-bid-premium btn-bid-success"
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 20)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 20)">+20</button>
+                        <button class="btn-bid-premium btn-bid-success"
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 30)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 30)">+30</button>
+                        <button class="btn-bid-premium btn-bid-success"
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
+                    </div>
                     
                     <!-- Admin Controls: Pause/Resume/Sold/Undo -->
                     <div class="mt-3" *ngIf="user?.role === 'ADMIN' && auctionState">
@@ -225,18 +209,8 @@
                                 <div class="accordion-body px-3 pb-3 pt-0">
                                     <div class="team-players-list" *ngIf="getTeamSoldPlayers(team.id).length > 0">
                                         <div class="player-row" *ngFor="let p of getTeamSoldPlayers(team.id); let i = index">
-                                            <div class="player-avatar">
-                                                <img *ngIf="p.player?.imageUrl || p.imageUrl" [src]="getPlayerImageUrl(p.player?.imageUrl || p.imageUrl)" [alt]="getPlayerName(p)">
-                                                <span *ngIf="!p.player?.imageUrl && !p.imageUrl" class="avatar-placeholder">{{ (getPlayerName(p) || '?')[0] | uppercase }}</span>
-                                            </div>
-                                            <div class="player-info flex-grow-1">
-                                                <span class="player-name">{{ getPlayerName(p) }}</span>
-                                                <span class="player-category badge">{{ getPlayerCategory(p) }}</span>
-                                            </div>
-                                            <div class="player-price">
-                                                <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
-                                                <small class="text-muted">(BP: ₹{{ getPlayerBasePrice(p) }})</small>
-                                            </div>
+                                            <span class="player-name">{{ getPlayerName(p) }}</span>
+                                            <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
                                         </div>
                                         <div class="team-total-row">
                                             <span>Total Spent</span>

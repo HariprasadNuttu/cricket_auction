@@ -41,119 +41,32 @@
   }
 }
 
-/* Owner: Place Your Bid - Top bar (mobile-first) */
-.owner-bid-bar {
-  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
-  border-radius: 12px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 16px rgba(21, 128, 61, 0.3);
-}
-
-.owner-bid-bar-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.owner-bid-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.owner-bid-label i {
-  font-size: 1.2rem;
-}
-
-.owner-bid-status {
-  margin-left: auto;
-  font-size: 0.8rem;
-  font-weight: 500;
-  opacity: 0.9;
-  background: rgba(255,255,255,0.2);
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-}
-
-.owner-bid-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.owner-bid-grid {
+/* Owner: Quick bid buttons only (no card/background) */
+.owner-bid-buttons {
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
-  justify-items: stretch;
+  margin-top: 1rem;
 }
 
-/* Mobile: all 4 bid buttons in one line, smaller to fit */
+.owner-bid-buttons .btn-bid-premium {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 56px;
+  max-height: 56px;
+  margin: 0 auto;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 575px) {
-  .owner-bid-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.35rem;
+  .owner-bid-buttons {
+    gap: 0.4rem;
+    margin-top: 0.75rem;
   }
 
-  .owner-bid-grid .btn-bid-premium {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+  .owner-bid-buttons .btn-bid-premium {
+    max-width: 100%;
     font-size: 0.85rem;
-    padding: 0;
-  }
-}
-
-.owner-custom-bid {
-  flex-direction: row;
-}
-
-.owner-custom-bid .form-control-premium {
-  flex: 1;
-  min-width: 0;
-}
-
-.owner-bid-min {
-  color: rgba(255,255,255,0.9);
-  font-size: 0.85rem;
-}
-
-@media (min-width: 576px) {
-  .owner-bid-bar-inner {
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .owner-bid-label {
-    min-width: 140px;
-  }
-
-  .owner-bid-controls {
-    flex: 1;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
-
-  .owner-bid-grid {
-    flex: 0 0 auto;
-  }
-
-  .owner-custom-bid {
-    flex: 1;
-    min-width: 200px;
-  }
-}
-
-@media (min-width: 768px) {
-  .owner-bid-bar {
-    padding: 1rem 1.25rem;
   }
 }
 
@@ -256,55 +169,17 @@
 .player-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.6rem 0.75rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: white;
   border-radius: 8px;
   margin-bottom: 0.5rem;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  transition: transform 0.15s ease;
-}
-
-.player-row:hover {
-  transform: translateX(4px);
 }
 
 .player-row:last-of-type {
   margin-bottom: 0;
-}
-
-.player-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.player-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.team-players-list .avatar-placeholder {
-  color: white;
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 0;
-  background: transparent;
-  opacity: 1;
-}
-
-.player-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .player-name {
@@ -312,22 +187,10 @@
   color: #212529;
 }
 
-.player-category {
-  font-size: 0.7rem;
-  background: #e9ecef;
-  color: #495057;
-  padding: 0.2rem 0.5rem;
-}
-
-.player-price {
-  text-align: right;
-  margin-left: auto;
-}
-
-.sold-price {
+.team-players-list .sold-price {
   font-weight: 700;
   color: #198754;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .team-total-row {

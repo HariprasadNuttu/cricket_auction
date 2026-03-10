@@ -49,7 +49,7 @@ export const refreshAccessToken = async (token: string) => {
         data: { refreshToken: newRefreshToken }
     });
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken, user };
 };
 
 export const registerUser = async (email: string, password: string, name: string, role: Role, teamName?: string) => {

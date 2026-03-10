@@ -35,7 +35,7 @@ export const register = async (req: Request, res: Response) => {
 export const refreshToken = async (req: Request, res: Response) => {
     try {
         const token = req.cookies.refreshToken;
-        const { accessToken, refreshToken: newRefreshToken } = await refreshAccessToken(token);
+        const { accessToken, refreshToken: newRefreshToken, user } = await refreshAccessToken(token);
 
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
@@ -44,8 +44,19 @@ export const refreshToken = async (req: Request, res: Response) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.json({ accessToken });
+        res.json({ accessToken, user: user ? { id: user.id, name: user.name, role: user.role } : null });
     } catch (error: any) {
         res.status(403).json({ message: error.message });
     }
+};
+
+export const logout = async (req: Request, res: Response) => {
+    res.cookie('refreshToken', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 0,
+        path: '/'
+    });
+    res.json({ message: 'Logged out' });
 };

@@ -177,18 +177,8 @@
             <div class="accordion-body px-3 pb-3 pt-0">
               <div class="team-players-list" *ngIf="getTeamSoldPlayers(team.id).length > 0">
                 <div class="player-row" *ngFor="let p of getTeamSoldPlayers(team.id)">
-                  <div class="player-avatar">
-                    <img *ngIf="p.player?.imageUrl || p.imageUrl" [src]="getPlayerImageUrl(p.player?.imageUrl || p.imageUrl)" [alt]="getPlayerName(p)">
-                    <span *ngIf="!p.player?.imageUrl && !p.imageUrl" class="avatar-placeholder">{{ (getPlayerName(p) || '?')[0] | uppercase }}</span>
-                  </div>
-                  <div class="player-info flex-grow-1">
-                    <span class="player-name">{{ getPlayerName(p) }}</span>
-                    <span class="player-category badge">{{ getPlayerCategory(p) }}</span>
-                  </div>
-                  <div class="player-price">
-                    <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
-                    <small class="text-muted">(BP: ₹{{ p.player?.basePrice ?? p.basePrice ?? 0 }})</small>
-                  </div>
+                  <span class="player-name">{{ getPlayerName(p) }}</span>
+                  <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
                 </div>
                 <div class="team-total-row">
                   <span>Total Spent</span>
