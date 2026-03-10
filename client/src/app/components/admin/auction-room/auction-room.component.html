@@ -1,39 +1,20 @@
 <div class="auction-room-container">
-  <h2 class="mb-4">Auction Room</h2>
+  <h2 class="mb-3">Auction Room</h2>
 
-  <!-- Group and Season: Text for Auctioneer, Dropdowns for Admin -->
-  <div class="mb-4">
-    <div class="card" *ngIf="user?.role === 'AUCTIONEER' && selectedGroupId && selectedSeasonId">
-      <div class="card-body py-2">
-        <span class="text-muted">Group:</span> <strong>{{ getGroupName() }}</strong>
-        <span class="mx-2">|</span>
-        <span class="text-muted">Season:</span> <strong>{{ getSeasonName() }}</strong>
-      </div>
+  <!-- Group and Season: Compact single-line display -->
+  <div class="card mb-2" *ngIf="selectedGroupId && selectedSeasonId">
+    <div class="card-body py-2">
+      <span class="text-muted">Group:</span> <strong>{{ getGroupName() }}</strong>
+      <span class="mx-2">|</span>
+      <span class="text-muted">Season:</span> <strong>{{ getSeasonName() }}</strong>
     </div>
-    <div class="row" *ngIf="user?.role !== 'AUCTIONEER'">
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-body">
-            <label class="form-label">Select Group:</label>
-            <select class="form-select" [(ngModel)]="selectedGroupId" (change)="onGroupChange()">
-              <option [value]="null">-- Select Group --</option>
-              <option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card">
-          <div class="card-body">
-            <label class="form-label">Select Season:</label>
-            <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()" [disabled]="!selectedGroupId">
-              <option [value]="null">-- Select Season --</option>
-              <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
+  </div>
+  <div class="alert alert-light border py-2 mb-2" *ngIf="!selectedSeasonId && (user?.role === 'ADMIN' || user?.role === 'AUCTIONEER')">
+    <span class="text-muted">Group:</span> <span>--</span>
+    <span class="mx-2">|</span>
+    <span class="text-muted">Season:</span> 
+    <span *ngIf="user?.role === 'ADMIN'">Select from <a routerLink="/admin/auction-rooms">Auction Rooms</a></span>
+    <span *ngIf="user?.role === 'AUCTIONEER'">Select from <a routerLink="/auctioneer">My Auction Rooms</a></span>
   </div>
 
   <!-- Auction Controls (Admin or Assigned Auctioneer) -->
@@ -84,8 +65,11 @@
           Current Player
         </div>
         <div class="card-body text-center">
-          <img *ngIf="currentPlayer?.imageUrl" [src]="currentPlayer.imageUrl" alt="{{ currentPlayer.name }}" class="player-auction-image mb-2">
-          <h3>{{ currentPlayer?.name }}</h3>
+          <div class="player-image-wrapper mb-2">
+            <img *ngIf="currentPlayer?.imageUrl" [src]="getPlayerImageUrl(currentPlayer.imageUrl)" [alt]="getPlayerName(currentPlayer)" class="player-auction-image">
+            <img *ngIf="!currentPlayer?.imageUrl" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dee2e6'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" [alt]="getPlayerName(currentPlayer)" class="player-auction-image player-placeholder">
+          </div>
+          <h3>{{ getPlayerName(currentPlayer) }}</h3>
           <p class="badge bg-secondary">{{ currentPlayer?.category }}</p>
           <h4>Base Price: {{ currentPlayer?.basePrice }}</h4>
           <hr>
@@ -109,43 +93,62 @@
       </ng-template>
     </div>
 
-    <!-- Bidding Section -->
-    <div class="col-md-8" *ngIf="auctionState?.status === 'LIVE'">
-      <div class="card">
-        <div class="card-header">
-          <h5>Place Bid</h5>
-        </div>
-        <div class="card-body">
-          <!-- Quick Bid Buttons -->
-          <div class="row mb-3">
-            <div class="col-12">
-              <h6>Quick Bids:</h6>
-              <div class="d-flex gap-2 flex-wrap">
-                <button *ngFor="let team of teams" 
-                  class="btn btn-outline-primary"
-                  [disabled]="!canBid(team.id, auctionState.currentPrice + 100)"
-                  (click)="placeBidForTeam(auctionState.currentPrice + 100, team.id)">
-                  {{ team.name }}: +₹100
-                </button>
-              </div>
+    <!-- Bidding Section - Admin/Auctioneer: Team Bid Tiles with +5,+10,+20,+30,+50 -->
+    <div class="col-md-8" *ngIf="auctionState?.status === 'LIVE' && (user?.role === 'ADMIN' || user?.role === 'AUCTIONEER')">
+      <div class="row g-3">
+        <div class="col-md-6 col-lg-3" *ngFor="let team of teams">
+          <div class="card h-100" [class.border-success]="auctionState?.currentBidderTeamId === team.id">
+            <div class="card-header bg-light py-2">
+              <h6 class="mb-0">{{ team.name }}</h6>
+              <small class="text-muted">Budget: ₹{{ team.remainingBudget }}</small>
             </div>
-          </div>
-
-          <!-- Custom Bid Amount -->
-          <div class="row">
-            <div class="col-md-6">
-              <label class="form-label">Custom Bid Amount:</label>
-              <div class="input-group">
-                <input type="number" class="form-control" [(ngModel)]="customBidAmount" min="0" placeholder="Enter amount">
-                <button class="btn btn-primary" (click)="placeBidForTeam(customBidAmount)" [disabled]="!customBidAmount || customBidAmount <= auctionState?.currentPrice">
-                  Place Bid
+            <div class="card-body py-2">
+              <div class="d-grid gap-2">
+                <button class="btn btn-sm btn-outline-primary" 
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 5)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 5, team.id)">
+                  +5
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 10)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 10, team.id)">
+                  +10
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 20)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 20, team.id)">
+                  +20
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 30)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 30, team.id)">
+                  +30
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                  [disabled]="!canBid(team.id, auctionState.currentPrice + 50)"
+                  (click)="placeBidForTeam(auctionState.currentPrice + 50, team.id)">
+                  +50
                 </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+      <!-- Custom Bid Amount -->
+      <div class="card mt-3">
+        <div class="card-body">
+          <label class="form-label">Custom Bid Amount:</label>
+          <div class="input-group" style="max-width: 300px;">
+            <input type="number" class="form-control" [(ngModel)]="customBidAmount" min="0" placeholder="Enter amount">
+            <button class="btn btn-primary" (click)="placeBidForTeam(customBidAmount)" [disabled]="!customBidAmount || customBidAmount <= auctionState?.currentPrice">
+              Place Bid
+            </button>
+          </div>
+          <small class="text-muted d-block mt-1">Minimum: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
+        </div>
+      </div>
     </div>
+
   </div>
 
   <!-- Teams Budget Table -->
@@ -197,8 +200,8 @@
         </thead>
         <tbody>
           <tr *ngFor="let player of players">
-            <td><strong>{{ player.name }}</strong></td>
-            <td>{{ player.category || player.role }}</td>
+            <td><strong>{{ getPlayerName(player) }}</strong></td>
+            <td>{{ getPlayerCategory(player) }}</td>
             <td>
               <span class="badge" [ngClass]="{
                 'bg-success': player.status === 'SOLD',
@@ -209,7 +212,7 @@
             <td>{{ player.team?.name || player.teamName || '-' }}</td>
             <td>₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
             <td *ngIf="user?.role === 'ADMIN' || user?.role === 'AUCTIONEER'">
-              <button class="btn btn-sm btn-warning" (click)="reopenPlayer(player.id)" [disabled]="player.status !== 'SOLD'">
+              <button class="btn btn-sm btn-warning" (click)="reopenPlayer(getSeasonPlayerId(player))" [disabled]="player.status !== 'SOLD'">
                 <i class="bi bi-arrow-counterclockwise"></i> Reopen
               </button>
             </td>

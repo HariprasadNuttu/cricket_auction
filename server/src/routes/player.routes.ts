@@ -9,7 +9,9 @@ import {
     getPlayersBySeason,
     updateSeasonPlayer,
     removePlayerFromSeason,
-    uploadMiddleware
+    uploadPlayerImage,
+    uploadMiddleware,
+    uploadPlayerImageMiddleware
 } from '../controllers/playerController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -21,6 +23,7 @@ router.post('/groups/:groupId/players/upload', authenticateToken, uploadMiddlewa
 router.get('/groups/:groupId/players', authenticateToken, getPlayersByGroup);
 router.put('/players/:id', authenticateToken, updatePlayer);
 router.delete('/players/:id', authenticateToken, deletePlayer);
+router.post('/players/upload-image', authenticateToken, uploadPlayerImageMiddleware, uploadPlayerImage);
 
 // Season-level player routes
 router.post('/seasons/:seasonId/players', authenticateToken, addPlayersToSeason);

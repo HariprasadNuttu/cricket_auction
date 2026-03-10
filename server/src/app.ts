@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
@@ -25,6 +26,9 @@ app.use('/api', seasonRoutes); // Season routes include both /groups/:groupId/se
 app.use('/api', playerRoutes); // Player routes include both /groups/:groupId/players and /seasons/:seasonId/players
 app.use('/api', directAssignRoutes);
 app.use('/api/auction-rooms', auctionRoomRoutes);
+
+// Serve uploaded player images
+app.use('/api/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/health', (req, res) => {
     res.send('OK');

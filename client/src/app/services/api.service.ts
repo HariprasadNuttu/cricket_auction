@@ -111,8 +111,14 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/groups/${groupId}/players/upload`, formData, { headers: this.getHeaders() });
   }
 
-  updatePlayer(playerId: number, data: { name?: string; category?: string; basePrice?: number; country?: string }): Observable<any> {
+  updatePlayer(playerId: number, data: { name?: string; category?: string; basePrice?: number; country?: string; imageUrl?: string }): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/players/${playerId}`, data, { headers: this.getHeaders() });
+  }
+
+  uploadPlayerImage(file: File): Observable<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append('image', file);
+    return this.http.post<{ imageUrl: string }>(`${this.apiUrl}/players/upload-image`, formData, { headers: this.getHeaders() });
   }
 
   deletePlayer(playerId: number): Observable<any> {
@@ -132,8 +138,8 @@ export class ApiService {
     return this.http.put<any>(`${this.apiUrl}/season-players/${seasonPlayerId}`, data, { headers: this.getHeaders() });
   }
 
-  removePlayerFromSeason(seasonId: number, playerId: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/seasons/${seasonId}/players/${playerId}`, { headers: this.getHeaders() });
+  removeSeasonPlayer(seasonPlayerId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/season-players/${seasonPlayerId}`, { headers: this.getHeaders() });
   }
 
   // Direct Assignment APIs (use seasonPlayerId OR playerId - playerId assigns group player, auto-adds to season)
@@ -197,7 +203,7 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/undo-bid`, {}, { headers: this.getHeaders() });
   }
 
-  reopenPlayer(seasonId: number, playerId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/reopen-player`, { playerId }, { headers: this.getHeaders() });
+  reopenPlayer(seasonId: number, seasonPlayerId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/reopen-player`, { seasonPlayerId }, { headers: this.getHeaders() });
   }
 }

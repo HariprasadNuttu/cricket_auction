@@ -28,8 +28,10 @@ export class PlayersComponent implements OnInit {
     name: '',
     category: 'BATSMAN',
     basePrice: 100,
-    country: ''
+    country: '',
+    imageUrl: '' as string | null
   };
+  imageFile: File | null = null;
 
   constructor(
     private apiService: ApiService,
@@ -138,19 +140,23 @@ export class PlayersComponent implements OnInit {
       name: '',
       category: 'BATSMAN',
       basePrice: 100,
-      country: ''
+      country: '',
+      imageUrl: null
     };
     this.showCreateModal = true;
   }
 
   openEditModal(player: any) {
     this.selectedPlayer = player;
+    const p = player.player || player;
     this.formData = {
-      name: player.name,
-      category: player.category || 'BATSMAN',
-      basePrice: player.basePrice || 100,
-      country: player.country || ''
+      name: p.name || '',
+      category: p.category || 'BATSMAN',
+      basePrice: p.basePrice ?? 100,
+      country: p.country || '',
+      imageUrl: p.imageUrl || null
     };
+    this.imageFile = null;
     this.showEditModal = true;
   }
 
@@ -178,6 +184,56 @@ export class PlayersComponent implements OnInit {
     this.showAddToSeasonModal = false;
     this.selectedPlayer = null;
     this.csvFile = null;
+    this.imageFile = null;
+  }
+
+  getPlayerName(item: any): string {
+    return item?.player?.name ?? item?.name ?? '-';
+  }
+
+  getPlayerCategory(item: any): string {
+    return item?.player?.category ?? item?.category ?? item?.role ?? '-';
+  }
+
+  getPlayerBasePrice(item: any): number {
+    return item?.player?.basePrice ?? item?.basePrice ?? 0;
+  }
+
+  getSeasonPlayerStatus(item: any): string {
+    return item?.status ?? 'ACTIVE';
+  }
+
+  getSelectedPlayerImageUrl(): string | null {
+    if (!this.selectedPlayer) return null;
+    return this.selectedPlayer?.player?.imageUrl ?? this.selectedPlayer?.imageUrl ?? null;
+  }
+
+  getImageUrl(url: string | null): string {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+    return `/api/uploads/${url}`;
+  }
+
+  onImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (file && /^image\/(jpeg|jpg|png|gif|webp)$/i.test(file.type)) {
+      this.imageFile = file;
+    } else if (file) {
+      alert('Please select a valid image file (JPG, PNG, GIF, or WebP)');
+    }
+  }
+
+  onStatusChange(player: any, newStatus: string) {
+    const seasonPlayerId = player.id;
+    if (!seasonPlayerId || player.status === 'SOLD') return;
+    this.apiService.updateSeasonPlayer(seasonPlayerId, { status: newStatus }).subscribe({
+      next: () => this.loadSeasonPlayers(),
+      error: (e) => {
+        console.error('Failed to update status:', e);
+        alert(e.error?.message || 'Failed to update status');
+      }
+    });
   }
 
   onFileSelected(event: any) {
@@ -230,40 +286,73 @@ export class PlayersComponent implements OnInit {
       return;
     }
 
-    this.apiService.updatePlayer(this.selectedPlayer.id, this.formData).subscribe({
-      next: () => {
-        this.closeModals();
-        if (this.viewMode === 'group') {
-          this.loadPlayers();
-        } else {
-          this.loadSeasonPlayers();
+    const playerId = this.selectedPlayer?.player?.id ?? this.selectedPlayer?.id;
+    if (!playerId) {
+      alert('Invalid player');
+      return;
+    }
+
+    const doUpdate = (imageUrl?: string | null) => {
+      const data = {
+        name: this.formData.name,
+        category: this.formData.category,
+        basePrice: this.formData.basePrice,
+        country: this.formData.country,
+        imageUrl: imageUrl ?? this.formData.imageUrl ?? undefined
+      };
+      this.apiService.updatePlayer(playerId, data).subscribe({
+        next: () => {
+          this.closeModals();
+          if (this.viewMode === 'group') {
+            this.loadPlayers();
+          } else {
+            this.loadSeasonPlayers();
+          }
+        },
+        error: (e) => {
+          console.error('Failed to update player:', e);
+          alert(e.error?.message || 'Failed to update player');
         }
-      },
-      error: (e) => {
-        console.error('Failed to update player:', e);
-        alert(e.error?.message || 'Failed to update player');
-      }
-    });
+      });
+    };
+
+    if (this.imageFile) {
+      this.apiService.uploadPlayerImage(this.imageFile).subscribe({
+        next: (res) => doUpdate(res.imageUrl),
+        error: (e) => {
+          console.error('Failed to upload image:', e);
+          alert(e.error?.message || 'Failed to upload image');
+        }
+      });
+    } else {
+      doUpdate();
+    }
   }
 
-  deletePlayer(playerId: number) {
+  deletePlayer(player: any) {
     if (!confirm('Are you sure you want to delete this player?')) {
       return;
     }
 
-    this.apiService.deletePlayer(playerId).subscribe({
-      next: () => {
-        if (this.viewMode === 'group') {
-          this.loadPlayers();
-        } else {
-          this.loadSeasonPlayers();
+    if (this.viewMode === 'season') {
+      const seasonPlayerId = player.id;
+      this.apiService.removeSeasonPlayer(seasonPlayerId).subscribe({
+        next: () => this.loadSeasonPlayers(),
+        error: (e) => {
+          console.error('Failed to remove player from season:', e);
+          alert(e.error?.message || 'Failed to remove player from season');
         }
-      },
-      error: (e) => {
-        console.error('Failed to delete player:', e);
-        alert(e.error?.message || 'Failed to delete player');
-      }
-    });
+      });
+    } else {
+      const playerId = player.id;
+      this.apiService.deletePlayer(playerId).subscribe({
+        next: () => this.loadPlayers(),
+        error: (e) => {
+          console.error('Failed to delete player:', e);
+          alert(e.error?.message || 'Failed to delete player');
+        }
+      });
+    }
   }
 
   addPlayersToSeason() {

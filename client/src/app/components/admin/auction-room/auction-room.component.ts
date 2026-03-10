@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../../services/socket.service';
 import { AuthService } from '../../../services/auth.service';
@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-auction-room',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './auction-room.component.html',
   styleUrl: './auction-room.component.css'
 })
@@ -316,12 +316,12 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     });
   }
 
-  reopenPlayer(playerId: number) {
+  reopenPlayer(seasonPlayerId: number) {
     if (!confirm('Are you sure you want to reopen this player for auction? This will revert team changes if player was sold.')) {
       return;
     }
     if (!this.selectedSeasonId) return;
-    this.apiService.reopenPlayer(this.selectedSeasonId, playerId).subscribe({
+    this.apiService.reopenPlayer(this.selectedSeasonId, seasonPlayerId).subscribe({
       next: (response: any) => {
         console.log('Player reopened:', response);
         this.loadAuctionState();
@@ -386,6 +386,24 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     if (!teamId) return '';
     const team = this.teams.find(t => t.id === teamId);
     return team ? team.name : '';
+  }
+
+  getPlayerName(item: any): string {
+    return item?.player?.name ?? item?.name ?? '-';
+  }
+
+  getPlayerCategory(item: any): string {
+    return item?.player?.category ?? item?.category ?? item?.role ?? '-';
+  }
+
+  getPlayerImageUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+    return `/api/uploads/${url}`;
+  }
+
+  getSeasonPlayerId(item: any): number {
+    return item?.id ?? 0;
   }
 
   placeBidForTeam(amount: number, teamId?: number | string) {

@@ -16,6 +16,7 @@ enum Role {
 
 enum PlayerStatus {
   ACTIVE
+  INACTIVE
   SOLD
   UNSOLD
 }

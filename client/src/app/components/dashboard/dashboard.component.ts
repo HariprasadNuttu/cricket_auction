@@ -254,12 +254,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  reopenPlayer(playerId: number) {
+  reopenPlayer(seasonPlayerId: number) {
     if (!confirm('Are you sure you want to reopen this player for auction? This will revert team changes if player was sold.')) {
       return;
     }
     if (!this.selectedSeasonId) return;
-    this.apiService.reopenPlayer(this.selectedSeasonId, playerId).subscribe({
+    this.apiService.reopenPlayer(this.selectedSeasonId, seasonPlayerId).subscribe({
       next: (response: any) => {
         console.log('Player reopened:', response);
         this.fetchState();
@@ -404,6 +404,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return team ? team.name : '';
   }
 
+  getPlayerImageUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('/')) return url;
+    return `/api/uploads/${url}`;
+  }
+
+  getPlayerName(item: any): string {
+    return item?.player?.name ?? item?.name ?? '-';
+  }
+
+  getPlayerCategory(item: any): string {
+    return item?.player?.category ?? item?.category ?? item?.role ?? '-';
+  }
+
+  getSeasonPlayerId(item: any): number {
+    return item?.id ?? 0;
+  }
+
+  getPlayerBasePrice(item: any): number {
+    return item?.player?.basePrice ?? item?.basePrice ?? 0;
+  }
+
   placeBidForTeam(amount: number, teamId?: number | string) {
     // Only admin can place bids
     if (this.user?.role !== 'ADMIN') {
@@ -506,6 +528,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     // Check if amount is higher than current price and team has enough budget
     return amount > this.auctionState.currentPrice && team.remainingBudget >= amount;
+  }
+
+  canBidAsOwner(amount: number): boolean {
+    if (this.user?.role !== 'OWNER' || !this.auctionState || this.auctionState.status !== 'LIVE') {
+      return false;
+    }
+    const myTeam = this.teams.find(t => t.ownerId === this.user.id);
+    if (!myTeam) return false;
+    return amount > this.auctionState.currentPrice && myTeam.remainingBudget >= amount;
   }
 
   placeBidAsOwner(amount: number) {

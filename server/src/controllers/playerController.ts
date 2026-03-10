@@ -2,19 +2,47 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { parse } from 'csv-parse';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 interface AuthRequest extends Request {
     user?: any;
 }
 
-// Configure multer for file uploads
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for CSV (memory)
 const upload = multer({ 
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
+// Configure multer for player images (disk storage)
+const imageStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        const safeExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext.toLowerCase()) ? ext : '.jpg';
+        cb(null, `player-${Date.now()}${safeExt}`);
+    }
+});
+const imageUpload = multer({
+    storage: imageStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB for images
+    fileFilter: (_req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/i;
+        if (allowed.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Only image files (jpeg, jpg, png, gif, webp) are allowed'));
+    }
+});
+
 // Middleware for file upload
 export const uploadMiddleware = upload.single('file');
+export const uploadPlayerImageMiddleware = imageUpload.single('image');
 
 // Add player to group
 export const addPlayerToGroup = async (req: AuthRequest, res: Response) => {
@@ -360,6 +388,21 @@ export const updateSeasonPlayer = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Season player not found' });
         }
         res.status(500).json({ error: 'Failed to update season player' });
+    }
+};
+
+// Upload player image
+export const uploadPlayerImage = async (req: AuthRequest, res: Response) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Image file is required' });
+        }
+        // Use relative path so it works with client's origin (nginx proxies /api to server)
+        const imageUrl = `/api/uploads/${req.file.filename}`;
+        res.json({ imageUrl });
+    } catch (error: any) {
+        console.error('Error uploading player image:', error);
+        res.status(500).json({ error: 'Failed to upload image' });
     }
 };
 

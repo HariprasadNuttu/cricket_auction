@@ -85,15 +85,19 @@
         </thead>
         <tbody>
           <tr *ngFor="let player of (viewMode === 'group' ? players : seasonPlayers)">
-            <td><strong>{{ player.name }}</strong></td>
-            <td>{{ player.category || player.role }}</td>
-            <td>₹{{ player.basePrice || 0 }}</td>
+            <td><strong>{{ getPlayerName(player) }}</strong></td>
+            <td>{{ getPlayerCategory(player) }}</td>
+            <td>₹{{ getPlayerBasePrice(player) || 0 }}</td>
             <td *ngIf="viewMode === 'season'">
-              <span class="badge" [ngClass]="{
-                'bg-success': player.status === 'SOLD',
-                'bg-primary': player.status === 'ACTIVE',
-                'bg-secondary': player.status === 'UNSOLD'
-              }">{{ player.status }}</span>
+              <select class="form-select form-select-sm" style="width: auto; min-width: 100px;"
+                [value]="getSeasonPlayerStatus(player)"
+                (change)="onStatusChange(player, $any($event.target).value)"
+                [disabled]="getSeasonPlayerStatus(player) === 'SOLD'">
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="SOLD" disabled>Sold</option>
+                <option value="UNSOLD">Unsold</option>
+              </select>
             </td>
             <td *ngIf="viewMode === 'season'">{{ player.team?.name || player.teamName || '-' }}</td>
             <td *ngIf="viewMode === 'season'">₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
@@ -101,7 +105,7 @@
               <button class="btn btn-sm btn-warning me-2" (click)="openEditModal(player)">
                 <i class="bi bi-pencil"></i> Edit
               </button>
-              <button class="btn btn-sm btn-danger" (click)="deletePlayer(player.id)">
+              <button class="btn btn-sm btn-danger" (click)="deletePlayer(player)">
                 <i class="bi bi-trash"></i> Delete
               </button>
             </td>
@@ -182,6 +186,58 @@
   </div>
   <div class="modal-backdrop fade" [class.show]="showUploadModal" [style.display]="showUploadModal ? 'block' : 'none'" (click)="closeModals()"></div>
 
-  <!-- Edit Modal (similar structure) -->
+  <!-- Edit Player Modal -->
+  <div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'flex' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Player</h5>
+          <button type="button" class="btn-close" (click)="closeModals()"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+            <div class="mb-3" *ngIf="getSelectedPlayerImageUrl()">
+              <label class="form-label">Current Image</label>
+              <div>
+                <img [src]="getImageUrl(getSelectedPlayerImageUrl())" [alt]="formData.name" class="img-thumbnail" style="max-height: 100px;">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Player Image</label>
+              <input type="file" class="form-control" accept="image/*" (change)="onImageSelected($event)">
+              <small class="form-text text-muted">JPG, PNG, GIF or WebP. Max 2MB.</small>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Player Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.name" name="editName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Category *</label>
+              <select class="form-select" [(ngModel)]="formData.category" name="editCategory" required>
+                <option value="BATSMAN">Batsman</option>
+                <option value="BOWLER">Bowler</option>
+                <option value="ALLROUNDER">All-rounder</option>
+                <option value="WICKETKEEPER">Wicket Keeper</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Base Price *</label>
+              <input type="number" class="form-control" [(ngModel)]="formData.basePrice" name="editBasePrice" min="0" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Country</label>
+              <input type="text" class="form-control" [(ngModel)]="formData.country" name="editCountry">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="updatePlayer()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
   <!-- Add to Season Modal (similar structure) -->
 </div>

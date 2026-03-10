@@ -113,12 +113,22 @@ export const getAuctionState = async (req: AuthRequest, res: Response) => {
             }
         }
 
+        // Flatten currentPlayer for client (includes imageUrl for auction display)
+        const currentPlayer = currentSeasonPlayer ? {
+            ...currentSeasonPlayer.player,
+            id: currentSeasonPlayer.playerId,
+            soldPrice: currentSeasonPlayer.soldPrice,
+            team: currentSeasonPlayer.team
+        } : null;
+
         res.json({ 
             state, 
             season,
             teams, 
             seasonPlayers,
+            players: seasonPlayers, // alias for client compatibility
             currentSeasonPlayer, 
+            currentPlayer,
             bidHistory 
         });
     } catch (error) {
