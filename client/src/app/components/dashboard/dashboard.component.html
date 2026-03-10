@@ -34,11 +34,11 @@
                         [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
                         (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
                 </div>
-                <div class="bid-custom-input owner-custom-bid">
+                <div class="bid-custom-input owner-custom-bid d-none d-md-flex">
                     <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
                     <button class="btn-bid-premium btn-bid-primary" [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
                 </div>
-                <small class="owner-bid-min" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
+                <small class="owner-bid-min d-none d-md-inline" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
             </div>
         </div>
     </div>

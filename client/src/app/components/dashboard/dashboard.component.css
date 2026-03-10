@@ -91,9 +91,20 @@
   justify-items: stretch;
 }
 
+/* Mobile: all 4 bid buttons in one line, smaller to fit */
 @media (max-width: 575px) {
   .owner-bid-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+  }
+
+  .owner-bid-grid .btn-bid-premium {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 0.85rem;
+    padding: 0;
   }
 }
 
