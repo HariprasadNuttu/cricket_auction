@@ -217,31 +217,98 @@
             </ng-template>
         </div>
 
-        <!-- Teams Leaderboard - Compact Table -->
+        <!-- Teams Accordion + Owner Bid Section -->
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">Teams</div>
-                <div class="card-body p-2">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th class="text-end">Budget Left</th>
-                                <th class="text-end">Players</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr *ngFor="let team of teams">
-                                <td><strong>{{ team.name }}</strong></td>
-                                <td class="text-end">
-                                    <span class="badge bg-primary">{{ team.remainingBudget }}</span>
-                                </td>
-                                <td class="text-end">
-                                    <span class="badge bg-secondary">{{ team.totalPlayers }}</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Owner Bid Section - Prominent, always visible when owner has season selected -->
+            <div class="card mb-3 border-success" *ngIf="user?.role === 'OWNER' && selectedSeasonId">
+                <div class="card-header bg-success text-white d-flex align-items-center">
+                    <i class="bi bi-cash-stack me-2"></i>
+                    <span class="fw-bold">Place Your Bid</span>
+                    <span class="badge bg-light text-dark ms-2" *ngIf="!auctionState || auctionState?.status !== 'LIVE'">Auction not live</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap mb-2">
+                        <button class="btn btn-success" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 10)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 10)">
+                            Bid +10
+                        </button>
+                        <button class="btn btn-success" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 20)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 20)">
+                            Bid +20
+                        </button>
+                        <button class="btn btn-success" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 30)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 30)">
+                            Bid +30
+                        </button>
+                        <button class="btn btn-success" 
+                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
+                            (click)="placeBidAsOwner(auctionState.currentPrice + 50)">
+                            Bid +50
+                        </button>
+                    </div>
+                    <div class="input-group" style="max-width: 280px;">
+                        <input type="number" class="form-control" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
+                        <button class="btn btn-primary" [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
+                    </div>
+                    <small class="text-muted d-block mt-1" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
+                </div>
+            </div>
+            <div class="card teams-accordion-card">
+                <div class="card-header d-flex align-items-center">
+                    <i class="bi bi-trophy-fill me-2 text-warning"></i>
+                    <span class="fw-bold">Teams</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="accordion accordion-teams" id="teamsAccordion">
+                        <div class="accordion-item border-0" *ngFor="let team of teams">
+                            <div class="accordion-header" 
+                                 [class.accordion-expanded]="isTeamExpanded(team.id)"
+                                 (click)="toggleTeamAccordion(team.id)">
+                                <div class="accordion-trigger d-flex justify-content-between align-items-center w-100 px-3 py-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <i class="bi accordion-chevron" 
+                                           [class.bi-chevron-down]="isTeamExpanded(team.id)" 
+                                           [class.bi-chevron-right]="!isTeamExpanded(team.id)"></i>
+                                        <span class="fw-semibold">{{ team.name }}</span>
+                                        <span class="badge bg-primary rounded-pill">₹{{ team.remainingBudget }} left</span>
+                                        <span class="badge bg-secondary rounded-pill">{{ team.totalPlayers }} players</span>
+                                    </div>
+                                    <span class="text-muted small">Total: ₹{{ team.totalBudget ?? 2000 }}</span>
+                                </div>
+                            </div>
+                            <div class="accordion-collapse" [class.show]="isTeamExpanded(team.id)">
+                                <div class="accordion-body px-3 pb-3 pt-0">
+                                    <div class="team-players-list" *ngIf="getTeamSoldPlayers(team.id).length > 0">
+                                        <div class="player-row" *ngFor="let p of getTeamSoldPlayers(team.id); let i = index">
+                                            <div class="player-avatar">
+                                                <img *ngIf="p.player?.imageUrl || p.imageUrl" [src]="getPlayerImageUrl(p.player?.imageUrl || p.imageUrl)" [alt]="getPlayerName(p)">
+                                                <span *ngIf="!p.player?.imageUrl && !p.imageUrl" class="avatar-placeholder">{{ (getPlayerName(p) || '?')[0] | uppercase }}</span>
+                                            </div>
+                                            <div class="player-info flex-grow-1">
+                                                <span class="player-name">{{ getPlayerName(p) }}</span>
+                                                <span class="player-category badge">{{ getPlayerCategory(p) }}</span>
+                                            </div>
+                                            <div class="player-price">
+                                                <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
+                                                <small class="text-muted">(BP: ₹{{ getPlayerBasePrice(p) }})</small>
+                                            </div>
+                                        </div>
+                                        <div class="team-total-row">
+                                            <span>Total Spent</span>
+                                            <strong class="text-success">₹{{ getTeamTotalSpent(team.id) }}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="text-center text-muted py-4" *ngIf="getTeamSoldPlayers(team.id).length === 0">
+                                        <i class="bi bi-person-x fs-4 d-block mb-2"></i>
+                                        No players sold yet
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

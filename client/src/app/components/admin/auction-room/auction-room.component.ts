@@ -30,6 +30,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
   selectedSeasonId: number | null = null;
   currentSeason: any = null;
   currentGroup: any = null;
+  expandedTeamId: number | null = null;
 
   private subs: Subscription = new Subscription();
 
@@ -404,6 +405,22 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
 
   getSeasonPlayerId(item: any): number {
     return item?.id ?? 0;
+  }
+
+  toggleTeamAccordion(teamId: number) {
+    this.expandedTeamId = this.expandedTeamId === teamId ? null : teamId;
+  }
+
+  isTeamExpanded(teamId: number): boolean {
+    return this.expandedTeamId === teamId;
+  }
+
+  getTeamSoldPlayers(teamId: number): any[] {
+    return this.players.filter(p => (p.teamId === teamId || p.team?.id === teamId) && p.status === 'SOLD');
+  }
+
+  getTeamTotalSpent(teamId: number): number {
+    return this.getTeamSoldPlayers(teamId).reduce((sum, p) => sum + (p.soldPrice || 0), 0);
   }
 
   placeBidForTeam(amount: number, teamId?: number | string) {

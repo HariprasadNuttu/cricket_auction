@@ -20,3 +20,159 @@
   background: #f8f9fa;
   opacity: 0.9;
 }
+
+/* Teams Accordion - Premium UI */
+.teams-accordion-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.teams-accordion-card .card-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+}
+
+.accordion-teams .accordion-item {
+  border-bottom: 1px solid #eee;
+}
+
+.accordion-teams .accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-trigger {
+  cursor: pointer;
+  transition: background 0.2s ease;
+  background: #fff;
+}
+
+.accordion-trigger:hover {
+  background: #f8f9fa;
+}
+
+.accordion-header.accordion-expanded .accordion-trigger {
+  background: #f0f7ff;
+  border-left: 3px solid #0d6efd;
+}
+
+.accordion-chevron {
+  font-size: 0.9rem;
+  color: #6c757d;
+  transition: transform 0.2s ease;
+}
+
+.accordion-collapse {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease-out;
+}
+
+.accordion-collapse.show {
+  max-height: 600px;
+  transition: max-height 0.5s ease-in;
+}
+
+.accordion-collapse.show .team-players-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.team-players-list {
+  background: #fafbfc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.15s ease;
+}
+
+.player-row:hover {
+  transform: translateX(4px);
+}
+
+.player-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.team-players-list .avatar-placeholder {
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 0;
+  background: transparent;
+  opacity: 1;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #212529;
+}
+
+.player-category {
+  font-size: 0.7rem;
+  background: #e9ecef;
+  color: #495057;
+  padding: 0.2rem 0.5rem;
+}
+
+.player-price {
+  text-align: right;
+  margin-left: auto;
+}
+
+.sold-price {
+  font-weight: 700;
+  color: #198754;
+  font-size: 1rem;
+}
+
+.team-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 8px;
+  font-weight: 600;
+}
