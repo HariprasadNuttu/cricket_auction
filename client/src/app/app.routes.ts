@@ -14,12 +14,22 @@ import { ReportsComponent } from './components/admin/reports/reports.component';
 import { SeasonRedirectComponent } from './components/admin/season-redirect/season-redirect.component';
 import { AuctioneerLayoutComponent } from './components/auctioneer/auctioneer-layout.component';
 import { AuctioneerRoomsComponent } from './components/auctioneer/auctioneer-rooms/auctioneer-rooms.component';
+import { OwnerLayoutComponent } from './components/owner/owner-layout.component';
 
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
+    {
+        path: 'owner',
+        component: OwnerLayoutComponent,
+        canActivate: [authGuard],
+        children: [
+            { path: '', component: DashboardComponent },
+            { path: 'dashboard', component: DashboardComponent }
+        ]
+    },
     { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
     {
         path: 'admin',

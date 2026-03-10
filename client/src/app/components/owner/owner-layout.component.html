@@ -1,0 +1,16 @@
+<div class="owner-layout">
+  <nav class="navbar navbar-dark owner-navbar">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0">Cricket Auction - Owner</span>
+      <div class="d-flex align-items-center owner-nav-right flex-wrap">
+        <span class="owner-user-name">{{ user?.name }}</span>
+        <span class="badge owner-badge">Owner</span>
+        <button class="btn btn-outline-light btn-sm owner-logout" (click)="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="owner-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>

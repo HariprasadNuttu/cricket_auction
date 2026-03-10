@@ -1,3 +1,151 @@
+/* Group & Season display (read-only, like screenshot) */
+.group-season-display {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.group-season-label {
+  color: #6c757d;
+  font-weight: 400;
+}
+
+.group-season-value {
+  color: #212529;
+}
+
+.group-season-sep {
+  color: #adb5bd;
+  margin: 0 0.5rem;
+}
+
+.group-season-display--empty .group-season-value {
+  font-weight: 400;
+  color: #6c757d;
+}
+
+/* Dashboard container */
+.dashboard-container {
+  padding: 0.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+}
+
+/* Owner: Place Your Bid - Top bar (mobile-first) */
+.owner-bid-bar {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  border-radius: 12px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 16px rgba(21, 128, 61, 0.3);
+}
+
+.owner-bid-bar-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.owner-bid-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.owner-bid-label i {
+  font-size: 1.2rem;
+}
+
+.owner-bid-status {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.9;
+  background: rgba(255,255,255,0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.owner-bid-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.owner-bid-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  justify-items: stretch;
+}
+
+@media (max-width: 575px) {
+  .owner-bid-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.owner-custom-bid {
+  flex-direction: row;
+}
+
+.owner-custom-bid .form-control-premium {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-bid-min {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.85rem;
+}
+
+@media (min-width: 576px) {
+  .owner-bid-bar-inner {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .owner-bid-label {
+    min-width: 140px;
+  }
+
+  .owner-bid-controls {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .owner-bid-grid {
+    flex: 0 0 auto;
+  }
+
+  .owner-custom-bid {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+@media (min-width: 768px) {
+  .owner-bid-bar {
+    padding: 1rem 1.25rem;
+  }
+}
+
 .player-image-wrapper {
   min-height: 120px;
   display: flex;
@@ -180,4 +328,39 @@
   background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
   border-radius: 8px;
   font-weight: 600;
+}
+
+/* Owner view - Mobile optimizations */
+.owner-view .card {
+  border-radius: 12px;
+}
+
+.owner-view .card-body {
+  padding: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .owner-view .card-body {
+    padding: 1rem;
+  }
+}
+
+.owner-view .accordion-trigger {
+  padding: 0.75rem 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 575px) {
+  .owner-view .accordion-trigger {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .owner-view .accordion-trigger .d-flex.gap-3 {
+    gap: 0.5rem !important;
+  }
+
+  .owner-view .accordion-trigger .badge {
+    font-size: 0.7rem;
+  }
 }

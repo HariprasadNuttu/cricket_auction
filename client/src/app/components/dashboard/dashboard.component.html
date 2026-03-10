@@ -1,15 +1,44 @@
-<div class="container mt-4">
-    <!-- Season Selector -->
-    <div class="row mb-3" *ngIf="groups.length > 0">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <label class="form-label">Select Season:</label>
-                    <select class="form-select" [(ngModel)]="selectedSeasonId" (change)="onSeasonChange()">
-                        <option [value]="null">-- Select Season --</option>
-                        <option *ngFor="let season of seasons" [value]="season.id">{{ season.name }} ({{ season.year }})</option>
-                    </select>
+<div class="dashboard-container" [class.owner-view]="user?.role === 'OWNER'">
+    <!-- Group & Season Display (read-only, at top like screenshot) -->
+    <div class="group-season-display" *ngIf="selectedSeasonId">
+        <span class="group-season-label">Group:</span> <strong class="group-season-value">{{ getGroupName() }}</strong>
+        <span class="group-season-sep">|</span>
+        <span class="group-season-label">Season:</span> <strong class="group-season-value">{{ getSeasonName() }}</strong>
+    </div>
+    <div class="group-season-display group-season-display--empty" *ngIf="!selectedSeasonId && groups.length > 0">
+        <span class="group-season-label">Group:</span> <span>--</span>
+        <span class="group-season-sep">|</span>
+        <span class="group-season-label">Season:</span> <span>--</span>
+    </div>
+
+    <!-- Owner: Place Your Bid - Top bar (single instance, mobile-first) -->
+    <div class="owner-bid-bar" *ngIf="user?.role === 'OWNER' && selectedSeasonId">
+        <div class="owner-bid-bar-inner">
+            <div class="owner-bid-label">
+                <i class="bi bi-cash-stack"></i>
+                <span>Place Your Bid</span>
+                <span class="owner-bid-status" *ngIf="!auctionState || auctionState.status !== 'LIVE'">Auction not live</span>
+            </div>
+            <div class="owner-bid-controls">
+                <div class="bid-buttons-grid owner-bid-grid">
+                    <button class="btn-bid-premium btn-bid-success" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 10)"
+                        (click)="placeBidAsOwner(auctionState.currentPrice + 10)">+10</button>
+                    <button class="btn-bid-premium btn-bid-success" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 20)"
+                        (click)="placeBidAsOwner(auctionState.currentPrice + 20)">+20</button>
+                    <button class="btn-bid-premium btn-bid-success" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 30)"
+                        (click)="placeBidAsOwner(auctionState.currentPrice + 30)">+30</button>
+                    <button class="btn-bid-premium btn-bid-success" 
+                        [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
+                        (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
                 </div>
+                <div class="bid-custom-input owner-custom-bid">
+                    <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
+                    <button class="btn-bid-premium btn-bid-primary" [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
+                </div>
+                <small class="owner-bid-min" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
             </div>
         </div>
     </div>
@@ -47,7 +76,7 @@
         </div>
 
         <!-- Player Card -->
-        <div class="col-md-4">
+        <div class="col-12 col-md-4">
             <div class="card" *ngIf="currentPlayer; else noPlayer">
                 <div class="card-header bg-primary text-white">
                     Current Player
@@ -128,30 +157,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Owner Bid Controls (in card - uses same premium styles) -->
-                <div class="card-footer" *ngIf="user?.role === 'OWNER' && auctionState?.status === 'LIVE'">
-                    <h6 class="mb-2">Place Your Bid</h6>
-                    <div class="bid-buttons-grid mb-2">
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!canBidAsOwner(auctionState.currentPrice + 10)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 10)">+10</button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!canBidAsOwner(auctionState.currentPrice + 20)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 20)">+20</button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!canBidAsOwner(auctionState.currentPrice + 30)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 30)">+30</button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!canBidAsOwner(auctionState.currentPrice + 50)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
-                    </div>
-                    <div class="bid-custom-input">
-                        <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
-                        <button class="btn-bid-premium btn-bid-primary" [disabled]="!customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
-                    </div>
-                    <small class="text-muted d-block mt-1" *ngIf="auctionState">Min: ₹{{ auctionState.currentPrice + 1 }}</small>
-                </div>
             </div>
             
             <!-- Team Bid Tiles - Below Current Player Card -->
@@ -191,45 +196,8 @@
             </ng-template>
         </div>
 
-        <!-- Teams Accordion + Owner Bid Section -->
-        <div class="col-md-8">
-            <!-- Owner Bid Section - Prominent, always visible when owner has season selected -->
-            <div class="card mb-3 border-success" *ngIf="user?.role === 'OWNER' && selectedSeasonId">
-                <div class="card-header bg-success text-white d-flex align-items-center">
-                    <i class="bi bi-cash-stack me-2"></i>
-                    <span class="fw-bold">Place Your Bid</span>
-                    <span class="badge bg-light text-dark ms-2" *ngIf="!auctionState || auctionState?.status !== 'LIVE'">Auction not live</span>
-                </div>
-                <div class="card-body">
-                    <div class="bid-buttons-grid mb-3">
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 10)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 10)">
-                            +10
-                        </button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 20)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 20)">
-                            +20
-                        </button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 30)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 30)">
-                            +30
-                        </button>
-                        <button class="btn-bid-premium btn-bid-success" 
-                            [disabled]="!auctionState || auctionState.status !== 'LIVE' || !canBidAsOwner(auctionState.currentPrice + 50)"
-                            (click)="placeBidAsOwner(auctionState.currentPrice + 50)">
-                            +50
-                        </button>
-                    </div>
-                    <div class="bid-custom-input">
-                        <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Custom amount">
-                        <button class="btn-bid-premium btn-bid-primary" [disabled]="!auctionState || auctionState.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)" (click)="placeBidAsOwner(customBidAmount)">Bid</button>
-                    </div>
-                    <small class="text-muted d-block mt-1" *ngIf="auctionState">Min: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
-                </div>
-            </div>
+        <!-- Teams Accordion -->
+        <div class="col-12 col-md-8">
             <div class="card teams-accordion-card">
                 <div class="card-header d-flex align-items-center">
                     <i class="bi bi-trophy-fill me-2 text-warning"></i>

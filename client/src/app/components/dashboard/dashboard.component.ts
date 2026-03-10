@@ -399,6 +399,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.players.filter(p => p.status === 'UNSOLD').length;
   }
 
+  getGroupName(): string {
+    if (!this.groups?.length) return '--';
+    const season = this.seasons?.find((s: any) => s.id === this.selectedSeasonId);
+    const groupId = season?.groupId ?? this.groups[0]?.id;
+    const group = this.groups.find((g: any) => g.id === groupId) || this.groups[0];
+    return group?.name ?? '--';
+  }
+
+  getSeasonName(): string {
+    const season = this.seasons?.find((s: any) => s.id === this.selectedSeasonId);
+    return season?.name ?? '--';
+  }
+
   getTeamNameById(teamId: number | null): string {
     if (!teamId) return '';
     const team = this.teams.find(t => t.id === teamId);

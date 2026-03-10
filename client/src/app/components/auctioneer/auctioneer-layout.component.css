@@ -2,3 +2,8 @@
   min-height: 100vh;
   background-color: #f8f9fa;
 }
+
+.auctioneer-layout .navbar-dark {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}

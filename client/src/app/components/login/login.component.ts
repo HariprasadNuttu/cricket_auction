@@ -27,7 +27,7 @@ export class LoginComponent {
         } else if (user?.role === 'AUCTIONEER') {
           this.router.navigate(['/auctioneer']);
         } else {
-          this.router.navigate(['/dashboard']);
+          this.router.navigate(['/owner']);
         }
       },
       error: (err) => {
