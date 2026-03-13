@@ -60,12 +60,12 @@
   <!-- Current Player Card -->
   <div class="row mb-4" *ngIf="selectedSeasonId">
     <div class="col-md-4">
-      <div class="card" *ngIf="currentPlayer; else noPlayer">
-        <div class="card-header bg-primary text-white">
+      <div class="card current-player-card" *ngIf="currentPlayer; else noPlayer">
+        <div class="card-header bg-primary text-white py-2">
           Current Player
         </div>
-        <div class="card-body text-center">
-          <div class="player-image-wrapper mb-2">
+        <div class="card-body text-center py-2">
+          <div class="player-image-wrapper mb-1">
             <img *ngIf="currentPlayer?.imageUrl" [src]="getPlayerImageUrl(currentPlayer.imageUrl)" [alt]="getPlayerName(currentPlayer)" class="player-auction-image" (error)="onPlayerImageError($event)">
             <img [style.display]="currentPlayer?.imageUrl ? 'none' : 'block'" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dee2e6'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" [alt]="getPlayerName(currentPlayer)" class="player-auction-image player-placeholder">
           </div>
@@ -74,13 +74,13 @@
           <h4>Base Price: {{ currentPlayer?.basePrice }}</h4>
           <hr>
           <h2 class="text-success">Current Bid: {{ auctionState?.currentPrice || 0 }}</h2>
-          <p *ngIf="auctionState?.currentBidderTeamId" class="mt-2">
+          <p *ngIf="auctionState?.currentBidderTeamId" class="mt-1">
             <span class="badge bg-info">Current Bidder: {{ getTeamNameById(auctionState.currentBidderTeamId) }}</span>
           </p>
-          <p *ngIf="auctionState?.status === 'PAUSED'" class="mt-2">
+          <p *ngIf="auctionState?.status === 'PAUSED'" class="mt-1">
             <span class="badge bg-warning text-dark">Auction Paused</span>
           </p>
-          <h3 class="mt-3">{{ timer }}</h3>
+          <h3 class="mt-2">{{ timer }}</h3>
         </div>
       </div>
       <ng-template #noPlayer>
@@ -93,7 +93,7 @@
       </ng-template>
     </div>
 
-    <!-- Bidding Section - Admin/Auctioneer: Team Bid Tiles with +5,+10,+20,+30,+50 (always visible, disabled when not live) -->
+    <!-- Bidding Section - Admin/Auctioneer: Team Bid Tiles with +10,+20,+30,+50 (always visible, disabled when not live) -->
     <div class="col-md-8" *ngIf="selectedSeasonId && (user?.role === 'ADMIN' || user?.role === 'AUCTIONEER')">
       <div class="card mb-3" [class.opacity-75]="auctionState?.status !== 'LIVE'">
         <div class="card-header d-flex align-items-center text-white" [class.bg-secondary]="auctionState?.status !== 'LIVE'" [class.bg-primary]="auctionState?.status === 'LIVE'">
@@ -112,9 +112,6 @@
             <div class="card-body py-2">
               <div class="team-bid-buttons">
                 <button class="btn-bid-premium btn-bid-outline" 
-                  [disabled]="auctionState?.status !== 'LIVE' || !canBid(team.id, auctionState.currentPrice + 5)"
-                  (click)="placeBidForTeam(auctionState.currentPrice + 5, team.id)">+5</button>
-                <button class="btn-bid-premium btn-bid-outline" 
                   [disabled]="auctionState?.status !== 'LIVE' || !canBid(team.id, auctionState.currentPrice + 10)"
                   (click)="placeBidForTeam(auctionState.currentPrice + 10, team.id)">+10</button>
                 <button class="btn-bid-premium btn-bid-outline" 
@@ -129,19 +126,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      <!-- Custom Bid Amount (hidden on mobile to save space) -->
-      <div class="card mt-3 d-none d-md-block">
-        <div class="card-body">
-          <label class="form-label">Custom Bid Amount:</label>
-          <div class="bid-custom-input">
-            <input type="number" class="form-control form-control-premium" [(ngModel)]="customBidAmount" [min]="(auctionState?.currentPrice || 0) + 1" placeholder="Enter amount">
-            <button class="btn-bid-premium btn-bid-primary" (click)="placeBidForTeam(customBidAmount)" [disabled]="auctionState?.status !== 'LIVE' || !customBidAmount || customBidAmount <= (auctionState?.currentPrice || 0)">
-              Place Bid
-            </button>
-          </div>
-          <small class="text-muted d-block mt-1">Minimum: ₹{{ (auctionState?.currentPrice || 0) + 1 }}</small>
         </div>
       </div>
       </div>

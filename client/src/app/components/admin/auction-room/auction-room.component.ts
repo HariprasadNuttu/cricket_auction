@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../../services/socket.service';
 import { AuthService } from '../../../services/auth.service';
 import { ApiService } from '../../../services/api.service';
+import { SoldCelebrationService } from '../../../services/sold-celebration.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -39,6 +40,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     private socketService: SocketService,
     private authService: AuthService,
     private apiService: ApiService,
+    private soldCelebration: SoldCelebrationService,
     private route: ActivatedRoute,
     private router: Router
   ) {
@@ -116,9 +118,20 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
       })
     );
 
+    // Celebration shown for ALL roles when viewing this auction room
     this.subs.add(
       this.socketService.listen('AUCTION_COMPLETE').subscribe((data: any) => {
         console.log('Auction completed:', data);
+        const seasonMatch = !this.selectedSeasonId || data.seasonId === this.selectedSeasonId;
+        if (seasonMatch && data.status === 'SOLD' && data.playerName && data.teamName) {
+          this.soldCelebration.triggerSold({
+            playerName: data.playerName,
+            teamName: data.teamName,
+            soldPrice: data.soldPrice || 0,
+            playerImageUrl: data.playerImageUrl,
+            category: data.category
+          });
+        }
         setTimeout(() => {
           this.loadAuctionState();
           if (this.user?.role === 'ADMIN' || this.user?.role === 'AUCTIONEER') {
@@ -126,7 +139,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
               if (this.getActivePlayersCount() > 0) {
                 this.startRandomAuction();
               }
-            }, 2000);
+            }, 9000); // Wait for celebration sequence before next player
           }
         }, 500);
       })

@@ -478,14 +478,19 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
                 })
             ]);
 
-            // Broadcast auction completion
+            // Broadcast auction completion (include player/team names for celebration overlay)
             if (ioInstance) {
+                const p = seasonPlayer.player as any;
                 ioInstance.emit('AUCTION_COMPLETE', {
                     seasonId: seasonIdNum,
                     seasonPlayerId: seasonPlayer.id,
                     status: 'SOLD',
                     teamId: auctionState.currentBidderTeamId,
-                    soldPrice: auctionState.currentPrice
+                    teamName: winningTeam.name,
+                    soldPrice: auctionState.currentPrice,
+                    playerName: p?.name || 'Player',
+                    playerImageUrl: p?.imageUrl || null,
+                    category: p?.category || null
                 });
             }
 

@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../services/socket.service';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
+import { SoldCelebrationService } from '../../services/sold-celebration.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -36,7 +37,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private socketService: SocketService,
     private authService: AuthService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private soldCelebration: SoldCelebrationService
   ) {
     this.authService.user$.subscribe(u => this.user = u);
   }
@@ -131,14 +133,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Listen for auction completion
+    // Listen for auction completion - celebration shown for ALL roles (Owner, Viewer, Admin, Auctioneer)
     this.subs.add(
       this.socketService.listen('AUCTION_COMPLETE').subscribe((data: any) => {
         console.log('Auction completed:', data);
-        // Refresh state to get updated player statuses
+        // Only filter by season when we have one selected; otherwise show for any sale
+        if (this.selectedSeasonId && data.seasonId !== this.selectedSeasonId) return;
+        if (data.status === 'SOLD' && data.playerName && data.teamName) {
+          this.soldCelebration.triggerSold({
+            playerName: data.playerName,
+            teamName: data.teamName,
+            soldPrice: data.soldPrice || 0,
+            playerImageUrl: data.playerImageUrl,
+            category: data.category
+          });
+        }
         setTimeout(() => {
           this.fetchState();
-          // Auto-start next random player if admin and there are active players
           if (this.user?.role === 'ADMIN') {
             setTimeout(() => {
               if (this.getActivePlayersCount() > 0) {
@@ -146,7 +157,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
               } else {
                 console.log('No more active players available');
               }
-            }, 2000); // Wait 2 seconds before starting next
+            }, 9000); // Wait for celebration sequence before next player
           }
         }, 500);
       })
