@@ -3,24 +3,74 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// Player names from user (64 players) - using BATSMAN and basePrice 20 as defaults
-const PLAYER_NAMES = [
-    'Harsha', 'Rajesh', 'Chinnaro', 'Nivas',
-    'Praveen', 'Rabada', 'Prakash', 'Vijay',
-    'Hari', 'Sai Prabha', 'Anil', 'Satya',
-    'Manoj', 'Santhosh', 'Naidu', 'Akhil',
-    'Chandiu (owner)', 'Srinu', 'Rajsekhar', 'Manish',
-    'Rahul', 'Gopi Dancer', 'Appanna', 'Surendra',
-    'Chandrasekhar', 'Dileep', 'Ch.Naveen', 'Vasu',
-    'Gopi ( electrical dept )', 'Ravi', 'Srikanth', 'Ramesh',
-    'peeru', 'Khilana', 'Naresh', 'Gopikrishna',
-    'Naveen', 'Jagga', 'Somesh Anna', 'Shankar Rahul Friend',
-    'KP', 'Rajesh Jr', 'Ananth', 'Amith',
-    'Sekhar Master', 'Suresh', 'Raja', 'Sunny',
-    'Barri Venkat', 'Venu', 'Raghava', 'Sai Kiran',
-    'Ganesh', 'Aravind', 'Bablu', 'Yeshwanth',
-    'Mani', 'mahesh', 'Veeraraj', 'Ashok',
-    'Prasanth', 'Srikar', 'Divakar', 'Ravi ( Divakar )'
+// Player names and categories from user (66 players)
+const PLAYERS: { name: string; category: PlayerCategory }[] = [
+    { name: 'Harsha', category: PlayerCategory.ALLROUNDER },
+    { name: 'Rajesh', category: PlayerCategory.ALLROUNDER },
+    { name: 'Chinnaro', category: PlayerCategory.BATSMAN },
+    { name: 'Nivas', category: PlayerCategory.ALLROUNDER },
+    { name: 'Praveen', category: PlayerCategory.ALLROUNDER },
+    { name: 'Rabada', category: PlayerCategory.BOWLER },
+    { name: 'Prakash', category: PlayerCategory.ALLROUNDER },
+    { name: 'Vijay', category: PlayerCategory.ALLROUNDER },
+    { name: 'Hari', category: PlayerCategory.BATSMAN },
+    { name: 'Sai Prabha', category: PlayerCategory.BATSMAN },
+    { name: 'Anil', category: PlayerCategory.BATSMAN },
+    { name: 'Satya', category: PlayerCategory.ALLROUNDER },
+    { name: 'Manoj', category: PlayerCategory.ALLROUNDER },
+    { name: 'Santhosh', category: PlayerCategory.BATSMAN },
+    { name: 'Naidu', category: PlayerCategory.ALLROUNDER },
+    { name: 'Akhil', category: PlayerCategory.BATSMAN },
+    { name: 'Chandiu (owner)', category: PlayerCategory.BATSMAN },
+    { name: 'Srinu', category: PlayerCategory.ALLROUNDER },
+    { name: 'Rajsekhar', category: PlayerCategory.BATSMAN },
+    { name: 'Manish', category: PlayerCategory.BATSMAN },
+    { name: 'Rahul', category: PlayerCategory.ALLROUNDER },
+    { name: 'Gopi Dancer', category: PlayerCategory.ALLROUNDER },
+    { name: 'Appanna', category: PlayerCategory.BATSMAN },
+    { name: 'Surendra', category: PlayerCategory.BATSMAN },
+    { name: 'Chandrasekhar', category: PlayerCategory.ALLROUNDER },
+    { name: 'Dileep', category: PlayerCategory.ALLROUNDER },
+    { name: 'Ch.Naveen', category: PlayerCategory.ALLROUNDER },
+    { name: 'Vasu', category: PlayerCategory.ALLROUNDER },
+    { name: 'Gopi ( electrical dept )', category: PlayerCategory.BATSMAN },
+    { name: 'Ravi', category: PlayerCategory.ALLROUNDER },
+    { name: 'Srikanth', category: PlayerCategory.BATSMAN },
+    { name: 'Ramesh', category: PlayerCategory.ALLROUNDER },
+    { name: 'peeru', category: PlayerCategory.BATSMAN },
+    { name: 'Khilana', category: PlayerCategory.ALLROUNDER },
+    { name: 'Naresh', category: PlayerCategory.ALLROUNDER },
+    { name: 'Gopikrishna', category: PlayerCategory.ALLROUNDER },
+    { name: 'Naveen', category: PlayerCategory.BOWLER },
+    { name: 'Jagga', category: PlayerCategory.ALLROUNDER },
+    { name: 'Somesh Anna', category: PlayerCategory.BOWLER },
+    { name: 'Shankar Rahul Friend', category: PlayerCategory.ALLROUNDER },
+    { name: 'KP', category: PlayerCategory.BATSMAN },
+    { name: 'Rajesh Jr', category: PlayerCategory.BOWLER },
+    { name: 'Ananth', category: PlayerCategory.ALLROUNDER },
+    { name: 'Amith', category: PlayerCategory.ALLROUNDER },
+    { name: 'Sekhar Master', category: PlayerCategory.BATSMAN },
+    { name: 'Suresh', category: PlayerCategory.ALLROUNDER },
+    { name: 'Raja', category: PlayerCategory.BATSMAN },
+    { name: 'Sunny', category: PlayerCategory.ALLROUNDER },
+    { name: 'Barri Venkat', category: PlayerCategory.ALLROUNDER },
+    { name: 'Venu', category: PlayerCategory.ALLROUNDER },
+    { name: 'Raghava', category: PlayerCategory.BOWLER },
+    { name: 'Sai Kiran', category: PlayerCategory.ALLROUNDER },
+    { name: 'Ganesh', category: PlayerCategory.BATSMAN },
+    { name: 'Aravind', category: PlayerCategory.BATSMAN },
+    { name: 'Bablu', category: PlayerCategory.ALLROUNDER },
+    { name: 'Yeshwanth', category: PlayerCategory.BATSMAN },
+    { name: 'Mani', category: PlayerCategory.BOWLER },
+    { name: 'mahesh', category: PlayerCategory.BATSMAN },
+    { name: 'Veeraraj', category: PlayerCategory.BOWLER },
+    { name: 'Ashok', category: PlayerCategory.ALLROUNDER },
+    { name: 'Prasanth', category: PlayerCategory.BOWLER },
+    { name: 'Srikar', category: PlayerCategory.BATSMAN },
+    { name: 'Divakar', category: PlayerCategory.ALLROUNDER },
+    { name: 'Ravi ( Divakar )', category: PlayerCategory.ALLROUNDER },
+    { name: 'poorna', category: PlayerCategory.ALLROUNDER },
+    { name: 'Krupa', category: PlayerCategory.ALLROUNDER }
 ];
 
 async function main() {
@@ -150,12 +200,12 @@ async function main() {
     // 7. Create Players (Group level)
     console.log('\n🏏 Creating players...');
     const players = [];
-    for (const name of PLAYER_NAMES) {
+    for (const p of PLAYERS) {
         const player = await prisma.player.create({
             data: {
                 groupId: group.id,
-                name: name.trim(),
-                category: PlayerCategory.BATSMAN,
+                name: p.name.trim(),
+                category: p.category,
                 basePrice: 20,
                 status: PlayerStatus.ACTIVE
             }

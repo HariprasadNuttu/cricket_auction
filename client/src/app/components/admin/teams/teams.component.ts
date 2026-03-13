@@ -98,7 +98,8 @@ export class TeamsComponent implements OnInit {
       const loadImage = (url: string): Promise<HTMLImageElement> =>
         new Promise((resolve, reject) => {
           const img = new Image();
-          img.crossOrigin = 'anonymous';
+          const isSameOrigin = url.startsWith('/') || url.startsWith(window.location.origin);
+          if (!isSameOrigin) img.crossOrigin = 'anonymous';
           img.onload = () => resolve(img);
           img.onerror = () => reject(new Error('Failed to load image'));
           img.src = url;
@@ -212,7 +213,7 @@ export class TeamsComponent implements OnInit {
     
     this.apiService.getTeamsBySeason(this.selectedSeasonId).subscribe({
       next: (data) => {
-        this.teams = data.teams || data || [];
+        this.teams = Array.isArray(data) ? data : (data?.teams || data?.data || []);
         this.loadOwners();
         this.loadSeasonPlayers();
         this.loadGroupPlayers();
@@ -227,7 +228,7 @@ export class TeamsComponent implements OnInit {
     if (!this.selectedSeasonId) return;
     this.apiService.getPlayersBySeason(this.selectedSeasonId).subscribe({
       next: (data) => {
-        this.seasonPlayers = Array.isArray(data) ? data : (data.players || data || []);
+        this.seasonPlayers = Array.isArray(data) ? data : (data.players || data.seasonPlayers || data || []);
       },
       error: (e) => console.error('Failed to load season players:', e)
     });

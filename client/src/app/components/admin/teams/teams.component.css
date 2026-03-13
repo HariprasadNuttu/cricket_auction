@@ -4,13 +4,8 @@
 }
 
 /* IPL-style Team Squads */
-.teams-squads-section {
-  margin-bottom: 2rem;
-}
-
-.teams-squads-section h4 {
-  color: #1e293b;
-  font-weight: 700;
+.teams-squads-card .card-body {
+  background: #f8fafc;
 }
 
 .ipl-teams-grid {
