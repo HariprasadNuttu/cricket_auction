@@ -1,0 +1,11 @@
+{
+  "name": "cricket-auction-app",
+  "private": true,
+  "scripts": {
+    "build": "cd server && npm install && npx prisma generate && npm run deploy:build",
+    "start": "cd server && (npx prisma db push --skip-generate || true) && node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

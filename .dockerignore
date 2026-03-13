@@ -1,7 +1,24 @@
+# Dependencies (installed during build)
 node_modules
-npm-debug.log
+**/node_modules
+
+# Build outputs (rebuilt during deploy)
 dist
+**/dist
+server/public
+
+# Git
 .git
 .gitignore
-docker-compose.yml
-README.md
+
+# Env (Railway injects these)
+.env
+.env.*
+
+# Docs
+*.md
+!readme.md
+
+# IDE
+.vscode
+.idea

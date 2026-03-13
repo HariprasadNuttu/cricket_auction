@@ -1,0 +1,17 @@
+# Railway / Nixpacks build config for Cricket Auction app
+# Monorepo: client (Angular) + server (Node.js). Server serves built client from public/
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd server && npm install"]
+
+[phases.build]
+cmds = [
+  "cd server && npx prisma generate",
+  "cd server && npm run deploy:build"
+]
+
+[start]
+cmd = "cd server && npx prisma db push --skip-generate || true && node dist/index.js"
