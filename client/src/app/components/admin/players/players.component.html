@@ -85,7 +85,12 @@
         </thead>
         <tbody>
           <tr *ngFor="let player of (viewMode === 'group' ? players : seasonPlayers)">
-            <td><strong>{{ getPlayerName(player) }}</strong></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <app-avatar [imageUrl]="(player?.player ?? player)?.imageUrl" [name]="getPlayerName(player)" size="md" [showPreviewOnHover]="true"></app-avatar>
+                <strong>{{ getPlayerName(player) }}</strong>
+              </div>
+            </td>
             <td>{{ getPlayerCategory(player) }}</td>
             <td>₹{{ getPlayerBasePrice(player) || 0 }}</td>
             <td *ngIf="viewMode === 'season'">
@@ -196,10 +201,10 @@
         </div>
         <div class="modal-body">
           <form>
-            <div class="mb-3" *ngIf="getSelectedPlayerImageUrl()">
-              <label class="form-label">Current Image</label>
+            <div class="mb-3" *ngIf="getImagePreviewUrl()">
+              <label class="form-label">{{ imageFile ? 'New Image Preview' : 'Current Image' }}</label>
               <div>
-                <img [src]="getImageUrl(getSelectedPlayerImageUrl())" [alt]="formData.name" class="img-thumbnail" style="max-height: 100px;">
+                <img [src]="getImagePreviewUrl()" [alt]="formData.name" class="img-thumbnail" style="max-height: 100px;">
               </div>
             </div>
             <div class="mb-3">

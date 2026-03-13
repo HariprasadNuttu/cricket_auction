@@ -2,7 +2,8 @@
   <nav class="navbar navbar-dark bg-dark">
     <div class="container-fluid">
       <span class="navbar-brand mb-0">Cricket Auction - Auctioneer</span>
-      <div class="d-flex align-items-center" style="gap: 1rem;">
+      <div class="d-flex align-items-center" style="gap: 0.75rem;">
+        <app-avatar [imageUrl]="user?.imageUrl" [name]="user?.name" size="sm"></app-avatar>
         <span class="text-white">{{ user?.name }}</span>
         <span class="badge bg-warning text-dark">Auctioneer</span>
         <button class="btn btn-outline-light btn-sm" (click)="logout()">Logout</button>

@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../../services/api.service';
+import { ImageService } from '../../../services/image.service';
 
 @Component({
   selector: 'app-teams',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AvatarComponent],
   templateUrl: './teams.component.html',
   styleUrl: './teams.component.css'
 })
@@ -46,9 +48,106 @@ export class TeamsComponent implements OnInit {
 
   constructor(
     private apiService: ApiService,
+    private imageService: ImageService,
     private route: ActivatedRoute,
     private router: Router
   ) { }
+
+  getTeamPlayers(team: any): any[] {
+    return this.seasonPlayers.filter(
+      (sp: any) => sp.status === 'SOLD' && (sp.teamId === team.id || sp.team?.id === team.id)
+    );
+  }
+
+  getImageUrl(url: string | null | undefined): string {
+    return this.imageService.getImageUrl(url);
+  }
+
+  async downloadTeamSquad(team: any, _event: Event) {
+    const players = this.getTeamPlayers(team);
+    try {
+      const canvas = document.createElement('canvas');
+      const pad = 24;
+      const cardW = 100;
+      const cardH = 130;
+      const cols = 5;
+      const rows = Math.ceil(Math.max(players.length, 1) / cols);
+      const w = pad * 2 + cols * (cardW + 12) - 12;
+      const h = pad * 2 + 60 + rows * (cardH + 12) - 12;
+      canvas.width = w * 2;
+      canvas.height = h * 2;
+      const ctx = canvas.getContext('2d')!;
+      const scale = 2;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = `bold ${scale * 18}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText(team.name.toUpperCase(), canvas.width / 2, scale * 36);
+
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
+      ctx.font = `${scale * 11}px system-ui`;
+      ctx.fillText(`${players.length}/15 Players`, canvas.width / 2, scale * 52);
+
+      const loadImage = (url: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load image'));
+          img.src = url;
+        });
+
+      for (let i = 0; i < players.length; i++) {
+        const sp = players[i];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const x = pad * scale + col * (cardW + 12) * scale;
+        const y = pad * scale + 60 * scale + row * (cardH + 12) * scale;
+
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+        ctx.fillRect(x, y, cardW * scale, cardH * scale);
+
+        const imgUrl = this.getImageUrl(sp.player?.imageUrl);
+        if (imgUrl) {
+          try {
+            const img = await loadImage(imgUrl);
+            ctx.drawImage(img, x, y, cardW * scale, (cardW * scale * 0.85));
+          } catch {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(x, y, cardW * scale, cardW * scale * 0.85);
+          }
+        } else {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(x, y, cardW * scale, cardW * scale * 0.85);
+        }
+
+        ctx.fillStyle = '#f1f5f9';
+        ctx.font = `600 ${scale * 9}px system-ui`;
+        ctx.textAlign = 'center';
+        const name = (sp.player?.name || 'Unknown').slice(0, 12);
+        ctx.fillText(name, x + (cardW * scale) / 2, y + cardW * scale * 0.85 + scale * 14);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = `bold ${scale * 10}px system-ui`;
+        ctx.fillText(`₹${sp.soldPrice ?? 0}`, x + (cardW * scale) / 2, y + cardH * scale - scale * 6);
+      }
+
+      const link = document.createElement('a');
+      link.download = `${team.name.replace(/[^a-zA-Z0-9]/g, '_')}_Squad.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Download failed:', e);
+      alert('Failed to download image. Please try again.');
+    }
+  }
 
   ngOnInit() {
     this.loadGroups();

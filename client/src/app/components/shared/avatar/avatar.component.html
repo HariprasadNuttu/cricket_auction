@@ -1,0 +1,19 @@
+<div class="avatar-wrapper" [class.avatar-hover-preview]="showPreviewOnHover && resolvedUrl && !showPlaceholder">
+  <div class="avatar" [class]="'avatar-' + size">
+    <img
+      *ngIf="resolvedUrl && !showPlaceholder"
+      [src]="resolvedUrl"
+      [alt]="name"
+      (error)="onError()"
+      class="avatar-img"
+    />
+    <div *ngIf="showPlaceholder" class="avatar-placeholder" [attr.aria-label]="name">
+      <svg viewBox="0 0 24 24" fill="currentColor" class="avatar-icon">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+      </svg>
+    </div>
+  </div>
+  <div *ngIf="showPreviewOnHover && resolvedUrl && !showPlaceholder" class="avatar-preview-tooltip">
+    <img [src]="resolvedUrl" [alt]="name" />
+  </div>
+</div>

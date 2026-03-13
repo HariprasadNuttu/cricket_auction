@@ -2,7 +2,8 @@
   <nav class="navbar navbar-dark owner-navbar">
     <div class="container-fluid">
       <span class="navbar-brand mb-0">Cricket Auction - Owner</span>
-      <div class="d-flex align-items-center owner-nav-right flex-wrap">
+      <div class="d-flex align-items-center owner-nav-right flex-wrap" style="gap: 0.5rem;">
+        <app-avatar [imageUrl]="user?.imageUrl" [name]="user?.name" size="sm"></app-avatar>
         <span class="owner-user-name">{{ user?.name }}</span>
         <span class="badge owner-badge">Owner</span>
         <button class="btn btn-outline-light btn-sm owner-logout" (click)="logout()">Logout</button>

@@ -1,12 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AvatarComponent } from '../shared/avatar/avatar.component';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-auctioneer-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, AvatarComponent],
   templateUrl: './auctioneer-layout.component.html',
   styleUrl: './auctioneer-layout.component.css'
 })

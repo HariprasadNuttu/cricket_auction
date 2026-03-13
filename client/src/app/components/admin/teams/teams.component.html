@@ -78,7 +78,12 @@
           </thead>
           <tbody>
             <tr *ngFor="let sp of assignedPlayers">
-              <td>{{ sp.player?.name }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <app-avatar [imageUrl]="sp.player?.imageUrl" [name]="sp.player?.name" size="sm" [showPreviewOnHover]="true"></app-avatar>
+                  {{ sp.player?.name }}
+                </div>
+              </td>
               <td>{{ sp.player?.category }}</td>
               <td>{{ sp.team?.name || '-' }}</td>
               <td>₹{{ sp.soldPrice ?? 0 }}</td>
@@ -143,6 +148,36 @@
     </div>
   </div>
   <div class="modal-backdrop fade" [class.show]="showAssignPlayerModal" [style.display]="showAssignPlayerModal ? 'block' : 'none'" (click)="closeAssignPlayerModal()"></div>
+
+  <!-- IPL-style Team Squads -->
+  <div class="teams-squads-section" *ngIf="selectedSeasonId && teams.length > 0">
+    <h4 class="mb-4"><i class="bi bi-trophy"></i> Team Squads</h4>
+    <div class="ipl-teams-grid">
+      <div *ngFor="let team of teams" class="ipl-team-card-wrapper">
+        <div class="ipl-team-card" [attr.data-team-id]="team.id">
+          <div class="ipl-team-header">
+            <h3 class="ipl-team-name">{{ team.name }}</h3>
+            <span class="ipl-team-badge">{{ getTeamPlayers(team).length }}/15</span>
+          </div>
+          <div class="ipl-players-grid">
+            <div *ngFor="let sp of getTeamPlayers(team)" class="ipl-player-card">
+              <div class="ipl-player-img-wrap">
+                <img [src]="getImageUrl(sp.player?.imageUrl)" [alt]="sp.player?.name" (error)="$any($event.target).style.display='none'" />
+              </div>
+              <div class="ipl-player-info">
+                <span class="ipl-player-name">{{ sp.player?.name }}</span>
+                <span class="ipl-player-price">₹{{ sp.soldPrice ?? 0 }}</span>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="getTeamPlayers(team).length === 0" class="ipl-empty-squad">No players yet</div>
+        </div>
+        <button type="button" class="btn btn-primary ipl-download-btn" (click)="downloadTeamSquad(team, $event)">
+          <i class="bi bi-download"></i> Download Squad
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Teams Table -->
   <div class="card" *ngIf="selectedSeasonId">

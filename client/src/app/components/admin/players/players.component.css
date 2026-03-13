@@ -3,6 +3,15 @@
   margin: 0 auto;
 }
 
+/* Player name column with avatar */
+.players-container .table td:first-child {
+  vertical-align: middle;
+}
+
+.players-container .table .d-flex.align-items-center.gap-2 {
+  min-height: 40px;
+}
+
 .btn-group {
   display: flex;
   gap: 0.5rem;

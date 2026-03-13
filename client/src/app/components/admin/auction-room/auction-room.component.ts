@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../../services/socket.service';
 import { AuthService } from '../../../services/auth.service';
@@ -11,7 +12,7 @@ import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-auction-room',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AvatarComponent],
   templateUrl: './auction-room.component.html',
   styleUrl: './auction-room.component.css'
 })

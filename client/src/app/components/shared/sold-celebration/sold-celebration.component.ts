@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SoldCelebrationService, SoldData } from '../../../services/sold-celebration.service';
+import { ImageService } from '../../../services/image.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -12,6 +13,7 @@ import { Subscription } from 'rxjs';
 })
 export class SoldCelebrationComponent implements OnInit, OnDestroy {
   private soldService = inject(SoldCelebrationService);
+  private imageService = inject(ImageService);
   private sub?: Subscription;
 
   visible = false;
@@ -84,9 +86,6 @@ export class SoldCelebrationComponent implements OnInit, OnDestroy {
   }
 
   getPlayerImageUrl(url: string | null | undefined): string {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    const base = typeof window !== 'undefined' ? window.location.origin : '';
-    return url.startsWith('/') ? `${base}${url}` : `${base}/api/uploads/${url}`;
+    return this.imageService.getImageUrl(url);
   }
 }

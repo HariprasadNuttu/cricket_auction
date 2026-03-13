@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../services/api.service';
 
 @Component({
   selector: 'app-players',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AvatarComponent],
   templateUrl: './players.component.html',
   styleUrl: './players.component.css'
 })
@@ -32,6 +33,7 @@ export class PlayersComponent implements OnInit {
     imageUrl: '' as string | null
   };
   imageFile: File | null = null;
+  imagePreviewUrl: string | null = null;
 
   constructor(
     private apiService: ApiService,
@@ -147,6 +149,7 @@ export class PlayersComponent implements OnInit {
   }
 
   openEditModal(player: any) {
+    this.revokeImagePreview();
     this.selectedPlayer = player;
     const p = player.player || player;
     this.formData = {
@@ -185,6 +188,20 @@ export class PlayersComponent implements OnInit {
     this.selectedPlayer = null;
     this.csvFile = null;
     this.imageFile = null;
+    this.revokeImagePreview();
+  }
+
+  private revokeImagePreview() {
+    if (this.imagePreviewUrl) {
+      URL.revokeObjectURL(this.imagePreviewUrl);
+      this.imagePreviewUrl = null;
+    }
+  }
+
+  getImagePreviewUrl(): string | null {
+    if (this.imageFile && this.imagePreviewUrl) return this.imagePreviewUrl;
+    const url = this.getSelectedPlayerImageUrl();
+    return url ? this.getImageUrl(url) : null;
   }
 
   getPlayerName(item: any): string {
@@ -218,7 +235,9 @@ export class PlayersComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input?.files?.[0];
     if (file && /^image\/(jpeg|jpg|png|gif|webp)$/i.test(file.type)) {
+      this.revokeImagePreview();
       this.imageFile = file;
+      this.imagePreviewUrl = URL.createObjectURL(file);
     } else if (file) {
       alert('Please select a valid image file (JPG, PNG, GIF, or WebP)');
     }

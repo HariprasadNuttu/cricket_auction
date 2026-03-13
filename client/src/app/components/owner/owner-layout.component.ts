@@ -1,12 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AvatarComponent } from '../shared/avatar/avatar.component';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-owner-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, AvatarComponent],
   templateUrl: './owner-layout.component.html',
   styleUrl: './owner-layout.component.css'
 })

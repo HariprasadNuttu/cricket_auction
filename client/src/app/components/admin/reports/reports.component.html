@@ -61,7 +61,12 @@
         </thead>
         <tbody>
           <tr *ngFor="let player of soldPlayers">
-            <td><strong>{{ player.name }}</strong></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <app-avatar [imageUrl]="player?.imageUrl" [name]="player?.name" size="sm" [showPreviewOnHover]="true"></app-avatar>
+                <strong>{{ player.name }}</strong>
+              </div>
+            </td>
             <td>{{ player.category || player.role }}</td>
             <td>₹{{ player.basePrice || 0 }}</td>
             <td class="text-success"><strong>₹{{ player.soldPrice || player.soldPrice || 0 }}</strong></td>
