@@ -44,6 +44,6 @@
     "prisma": "^6.19.2"
   },
   "prisma": {
-    "seed": "ts-node-dev prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts"
   }
 }

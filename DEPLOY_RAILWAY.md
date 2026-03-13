@@ -103,14 +103,16 @@ npx prisma db seed   # Optional: seed data
 ## Step 7 — Railway Deploy
 
 1. Connect your repo to Railway.
-2. **Root Directory**: leave as `.` (repo root). Railpack detects the root `package.json` and `nixpacks.toml`.
+2. **Root Directory**: leave as `.` (repo root).
 3. Add PostgreSQL service and link it to your app (Railway injects `DATABASE_URL`).
 4. Set **Region** to `asia-southeast1` in Project Settings if desired.
-5. Deploy — Railpack will:
-   - Install server deps
-   - Run `prisma generate`
-   - Build Angular → copy to `public/` → build server
-   - Start with `prisma db push` (schema sync) then `node dist/index.js`
+5. Deploy — Railway runs `start.sh` which:
+   - Installs deps, runs `prisma generate`
+   - Builds Angular → copies to `public/` → builds server
+   - Runs `prisma db push` (schema sync)
+   - Starts `node dist/index.js`
+
+**Note:** The server uses `process.env.PORT` (Railway injects this).
 
 ---
 
