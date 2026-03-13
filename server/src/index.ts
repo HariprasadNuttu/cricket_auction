@@ -7,9 +7,10 @@ import { initializeSocket } from './socket/index';
 dotenv.config();
 
 const httpServer = createServer(app);
+const allowedOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN || 'http://localhost:4200';
 const io = new Server(httpServer, {
     cors: {
-        origin: "http://localhost:4200",
+        origin: allowedOrigin,
         methods: ["GET", "POST"],
         credentials: true
     }

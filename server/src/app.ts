@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
@@ -12,8 +13,10 @@ import auctionRoomRoutes from './routes/auctionRoom.routes';
 
 const app = express();
 
+// CORS: allow Angular client (dev: localhost:4200, prod: same origin)
+const allowedOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN || 'http://localhost:4200';
 app.use(cors({
-    origin: 'http://localhost:4200', // Allow Angular client
+    origin: allowedOrigin,
     credentials: true
 }));
 app.use(express.json());
@@ -66,5 +69,18 @@ app.get('/api/debug/token', (req, res) => {
         res.json({ error: error.message });
     }
 });
+
+// Serve Angular static files from public/ (production deploy: copy client/dist/client/browser/* to public/)
+const publicPath = path.join(process.cwd(), 'public');
+if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath));
+    // SPA fallback: serve index.html for non-API routes (Angular client-side routing)
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next();
+        res.sendFile(path.join(publicPath, 'index.html'), (err) => {
+            if (err) next();
+        });
+    });
+}
 
 export default app;

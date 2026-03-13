@@ -15,6 +15,7 @@ dist
 build
 out
 .next
+server/public
 
 # Logs
 npm-debug.log*
