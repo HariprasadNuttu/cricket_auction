@@ -9,7 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate:multi-tenant": "ts-node src/scripts/migrateToMultiTenant.ts",
-    "build:client": "cd ../client && npm install && ng build",
+    "build:client": "cd ../client && npm install && npm run build",
     "copy:client": "node scripts/copy-client.js",
     "deploy:build": "npm run build:client && npm run copy:client && npm run build"
   },

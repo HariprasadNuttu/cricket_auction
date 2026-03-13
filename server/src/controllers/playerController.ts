@@ -185,12 +185,31 @@ export const getPlayersByGroup = async (req: AuthRequest, res: Response) => {
     }
 };
 
+// Helper: extract filename from imageUrl and delete from uploads if it's a server file
+function deleteOldPlayerImage(oldImageUrl: string | null) {
+    if (!oldImageUrl || oldImageUrl.startsWith('http')) return;
+    const filename = oldImageUrl.replace(/^\/api\/uploads\//, '').split('/').pop() || oldImageUrl;
+    if (!filename) return;
+    const filePath = path.join(uploadsDir, filename);
+    if (fs.existsSync(filePath)) {
+        try {
+            fs.unlinkSync(filePath);
+            console.log('Deleted old player image:', filename);
+        } catch (e) {
+            console.warn('Could not delete old image:', filename, e);
+        }
+    }
+}
+
 // Update player
 export const updatePlayer = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
         const { name, category, basePrice, country, status, imageUrl } = req.body;
         const playerId = parseInt(id);
+
+        // Get existing player to check for old image
+        const existing = await prisma.player.findUnique({ where: { id: playerId }, select: { imageUrl: true } });
 
         const data: Record<string, any> = {};
         if (name !== undefined) data.name = name;
@@ -204,6 +223,11 @@ export const updatePlayer = async (req: AuthRequest, res: Response) => {
             where: { id: playerId },
             data
         });
+
+        // Delete old image from server when replaced with new one
+        if (imageUrl !== undefined && existing?.imageUrl && existing.imageUrl !== (imageUrl || null)) {
+            deleteOldPlayerImage(existing.imageUrl);
+        }
 
         res.json(player);
     } catch (error: any) {
@@ -232,9 +256,11 @@ export const deletePlayer = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        const player = await prisma.player.findUnique({ where: { id: playerId }, select: { imageUrl: true } });
         await prisma.player.delete({
             where: { id: playerId }
         });
+        if (player?.imageUrl) deleteOldPlayerImage(player.imageUrl);
 
         res.json({ message: 'Player deleted successfully' });
     } catch (error: any) {
