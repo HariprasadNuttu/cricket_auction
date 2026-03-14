@@ -709,6 +709,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async downloadPlayerImage(p: any, team: any) {
     const playerName = this.getPlayerName(p);
+    const category = this.getPlayerCategory(p);
     const teamName = team?.name ?? this.getTeamNameById(p.teamId) ?? 'Team';
     const soldPrice = p.soldPrice ?? 0;
     const imgUrl = this.imageService.getImageUrl(p?.player?.imageUrl ?? p?.imageUrl);
@@ -790,17 +791,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ctx.font = `bold ${scale * 20}px system-ui`;
       ctx.fillText(playerName, canvas.width / 2, 380 * scale);
 
+      // Category
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+      ctx.font = `${scale * 12}px system-ui`;
+      ctx.fillText(category, canvas.width / 2, 405 * scale);
+
       // Sold to
       ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
       ctx.font = `${scale * 14}px system-ui`;
-      ctx.fillText('Sold to', canvas.width / 2, 420 * scale);
+      ctx.fillText('Sold to', canvas.width / 2, 435 * scale);
       ctx.font = `bold ${scale * 18}px system-ui`;
-      ctx.fillText(teamName, canvas.width / 2, 450 * scale);
+      ctx.fillText(teamName, canvas.width / 2, 465 * scale);
 
       // Amount
       ctx.fillStyle = '#22c55e';
       ctx.font = `bold ${scale * 24}px system-ui`;
-      ctx.fillText(`₹${soldPrice}`, canvas.width / 2, 500 * scale);
+      ctx.fillText(`₹${soldPrice}`, canvas.width / 2, 515 * scale);
 
       const link = document.createElement('a');
       link.download = `${playerName.replace(/[^a-zA-Z0-9]/g, '_')}_${teamName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;

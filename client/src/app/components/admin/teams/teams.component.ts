@@ -146,7 +146,12 @@ export class TeamsComponent implements OnInit {
         ctx.font = `600 ${scale * 9}px system-ui`;
         ctx.textAlign = 'center';
         const name = (sp.player?.name || 'Unknown').slice(0, 12);
-        ctx.fillText(name, x + (cardW * scale) / 2, y + cardW * scale * 0.85 + scale * 14);
+        ctx.fillText(name, x + (cardW * scale) / 2, y + cardW * scale * 0.85 + scale * 10);
+
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+        ctx.font = `${scale * 8}px system-ui`;
+        const category = (sp.player?.category ?? sp.category ?? '-').slice(0, 10);
+        ctx.fillText(category, x + (cardW * scale) / 2, y + cardW * scale * 0.85 + scale * 22);
 
         ctx.fillStyle = '#fbbf24';
         ctx.font = `bold ${scale * 10}px system-ui`;

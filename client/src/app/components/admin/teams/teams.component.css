@@ -106,6 +106,13 @@
   text-overflow: ellipsis;
 }
 
+.ipl-player-category {
+  font-size: 0.6rem;
+  color: rgba(251, 191, 36, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 .ipl-player-price {
   font-size: 0.65rem;
   color: #fbbf24;

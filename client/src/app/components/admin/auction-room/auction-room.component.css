@@ -186,6 +186,12 @@
   color: #212529;
 }
 
+.player-category {
+  font-size: 0.75rem;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
 .team-players-list .sold-price {
   font-weight: 700;
   color: #198754;
