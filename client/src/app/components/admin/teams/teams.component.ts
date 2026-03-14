@@ -115,7 +115,7 @@ export class TeamsComponent implements OnInit {
 
       ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
       ctx.font = `${scale * 11}px system-ui`;
-      ctx.fillText(`${players.length}/15 Players`, canvas.width / 2, headerCenterY + scale * 10);
+      ctx.fillText(`${players.length}/17 Players`, canvas.width / 2, headerCenterY + scale * 10);
 
       const headerH = 56 + 40; // logo height + gap (logical units)
       for (let i = 0; i < players.length; i++) {
@@ -494,6 +494,35 @@ export class TeamsComponent implements OnInit {
         alert(e.error?.message || 'Failed to delete team');
       }
     });
+  }
+
+  downloadExcel() {
+    const rows: string[][] = [];
+    rows.push(['Team', 'Player Name', 'Category', 'Sold Price (₹)', 'Total Players']);
+    for (const team of this.teams) {
+      const players = this.getTeamPlayers(team);
+      if (players.length === 0) {
+        rows.push([team.name, '-', '-', '0', '0/17']);
+      } else {
+        players.forEach((sp: any, i: number) => {
+          rows.push([
+            i === 0 ? team.name : '',
+            sp.player?.name ?? sp.name ?? '-',
+            sp.player?.category ?? sp.category ?? '-',
+            String(sp.soldPrice ?? 0),
+            i === 0 ? `${players.length}/17` : ''
+          ]);
+        });
+      }
+    }
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Team_Players_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 
   removeAssignment(sp: any) {

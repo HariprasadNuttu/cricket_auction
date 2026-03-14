@@ -1,15 +1,15 @@
 <div class="players-container">
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="players-header">
     <h2>Players Management</h2>
-    <div class="d-flex gap-2">
+    <div class="players-actions">
       <button class="btn btn-success" (click)="openCreateModal()" [disabled]="!selectedGroupId">
-        <i class="bi bi-plus-circle"></i> Add Player
+        <i class="bi bi-plus-circle"></i> <span class="btn-text">Add Player</span>
       </button>
       <button class="btn btn-info" (click)="openUploadModal()" [disabled]="!selectedGroupId">
-        <i class="bi bi-upload"></i> Upload CSV
+        <i class="bi bi-upload"></i> <span class="btn-text">Upload CSV</span>
       </button>
       <button class="btn btn-warning" *ngIf="viewMode === 'group' && selectedSeasonId" (click)="openAddToSeasonModal()">
-        <i class="bi bi-calendar-plus"></i> Add to Season
+        <i class="bi bi-calendar-plus"></i> <span class="btn-text">Add to Season</span>
       </button>
     </div>
   </div>
@@ -69,18 +69,18 @@
   </div>
 
   <!-- Players Table -->
-  <div class="card" *ngIf="(viewMode === 'group' && selectedGroupId) || (viewMode === 'season' && selectedSeasonId)">
-    <div class="card-body">
-      <table class="table table-hover">
+  <div class="card players-table-card" *ngIf="(viewMode === 'group' && selectedGroupId) || (viewMode === 'season' && selectedSeasonId)">
+    <div class="card-body table-responsive">
+      <table class="table table-hover players-table">
         <thead>
           <tr>
             <th>Player Name</th>
-            <th>Category</th>
+            <th class="col-actions">Actions</th>
+            <th class="col-category">Category</th>
             <th>Base Price</th>
-            <th *ngIf="viewMode === 'season'">Status</th>
-            <th *ngIf="viewMode === 'season'">Team</th>
-            <th *ngIf="viewMode === 'season'">Sold Price</th>
-            <th>Actions</th>
+            <th *ngIf="viewMode === 'season'" class="col-season">Status</th>
+            <th *ngIf="viewMode === 'season'" class="col-season">Team</th>
+            <th *ngIf="viewMode === 'season'" class="col-season">Sold Price</th>
           </tr>
         </thead>
         <tbody>
@@ -91,10 +91,20 @@
                 <strong>{{ getPlayerName(player) }}</strong>
               </div>
             </td>
-            <td>{{ getPlayerCategory(player) }}</td>
+            <td class="col-actions">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-warning" (click)="openEditModal(player)" title="Edit">
+                  <i class="bi bi-pencil"></i><span class="action-text"> Edit</span>
+                </button>
+                <button class="btn btn-sm btn-danger" (click)="deletePlayer(player)" title="Delete">
+                  <i class="bi bi-trash"></i><span class="action-text"> Delete</span>
+                </button>
+              </div>
+            </td>
+            <td class="col-category">{{ getPlayerCategory(player) }}</td>
             <td>₹{{ getPlayerBasePrice(player) || 0 }}</td>
-            <td *ngIf="viewMode === 'season'">
-              <select class="form-select form-select-sm" style="width: auto; min-width: 100px;"
+            <td *ngIf="viewMode === 'season'" class="col-season">
+              <select class="form-select form-select-sm form-select-mobile"
                 [value]="getSeasonPlayerStatus(player)"
                 (change)="onStatusChange(player, $any($event.target).value)"
                 [disabled]="getSeasonPlayerStatus(player) === 'SOLD'">
@@ -104,16 +114,8 @@
                 <option value="UNSOLD">Unsold</option>
               </select>
             </td>
-            <td *ngIf="viewMode === 'season'">{{ player.team?.name || player.teamName || '-' }}</td>
-            <td *ngIf="viewMode === 'season'">₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
-            <td>
-              <button class="btn btn-sm btn-warning me-2" (click)="openEditModal(player)">
-                <i class="bi bi-pencil"></i> Edit
-              </button>
-              <button class="btn btn-sm btn-danger" (click)="deletePlayer(player)">
-                <i class="bi bi-trash"></i> Delete
-              </button>
-            </td>
+            <td *ngIf="viewMode === 'season'" class="col-season">{{ player.team?.name || player.teamName || '-' }}</td>
+            <td *ngIf="viewMode === 'season'" class="col-season">₹{{ player.soldPrice || player.soldPrice || '-' }}</td>
           </tr>
           <tr *ngIf="(viewMode === 'group' ? players : seasonPlayers).length === 0">
             <td [attr.colspan]="viewMode === 'season' ? '7' : '4'" class="text-center text-muted">No players found.</td>

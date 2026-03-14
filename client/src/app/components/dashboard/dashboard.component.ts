@@ -678,6 +678,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return team ? team.name : 'Unknown';
   }
 
+  downloadTeamsExcel() {
+    const rows: string[][] = [];
+    rows.push(['Team', 'Player Name', 'Category', 'Sold Price (₹)', 'Total Players']);
+    for (const team of this.teams) {
+      const players = this.getTeamSoldPlayers(team.id);
+      if (players.length === 0) {
+        rows.push([team.name, '-', '-', '0', '0/17']);
+      } else {
+        players.forEach((p: any, i: number) => {
+          rows.push([
+            i === 0 ? team.name : '',
+            this.getPlayerName(p),
+            this.getPlayerCategory(p),
+            String(p.soldPrice ?? 0),
+            i === 0 ? `${players.length}/17` : ''
+          ]);
+        });
+      }
+    }
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Team_Players_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
   async downloadPlayerImage(p: any, team: any) {
     const playerName = this.getPlayerName(p);
     const teamName = team?.name ?? this.getTeamNameById(p.teamId) ?? 'Team';

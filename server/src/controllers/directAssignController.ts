@@ -106,10 +106,10 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Team does not belong to this season' });
         }
 
-        // Validate team squad not full (max 15 players)
-        if (team.totalPlayers >= 15) {
+        // Validate team squad not full (max 17 players)
+        if (team.totalPlayers >= 17) {
             return res.status(400).json({ 
-                error: 'Team squad is full (15 players). Cannot assign more players.' 
+                error: 'Team squad is full (17 players). Cannot assign more players.' 
             });
         }
 
@@ -264,7 +264,7 @@ export const bulkDirectAssign = async (req: AuthRequest, res: Response) => {
                 }
 
                 // Validate squad not full
-                if (team.totalPlayers >= 15) {
+                if (team.totalPlayers >= 17) {
                     results.errors.push({
                         row: record,
                         error: `Team "${team_name}" squad is full`

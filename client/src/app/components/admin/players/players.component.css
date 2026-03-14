@@ -1,6 +1,112 @@
 .players-container {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 0.5rem;
+}
+
+/* Header - wrap on mobile */
+.players-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.players-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.players-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 575px) {
+  .players-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .players-actions {
+    flex-direction: column;
+  }
+
+  .players-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-text {
+    display: inline;
+  }
+}
+
+@media (max-width: 767px) {
+  .btn-text {
+    display: none;
+  }
+
+  .players-actions .btn .bi {
+    margin-right: 0;
+  }
+}
+
+/* Hide Category on mobile */
+@media (max-width: 767px) {
+  .col-category {
+    display: none !important;
+  }
+
+  .col-season {
+    font-size: 0.85rem;
+  }
+}
+
+/* Actions - always visible, icon-only on mobile */
+.col-actions {
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 575px) {
+  .action-text {
+    display: none;
+  }
+
+  .action-buttons .btn {
+    padding: 0.35rem 0.5rem;
+    min-width: 36px;
+  }
+}
+
+/* Table responsive - Actions before Base Price on mobile, no scroll needed */
+.players-table-card .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.players-table {
+  min-width: 400px;
+}
+
+@media (max-width: 767px) {
+  .players-table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .players-table-card .table-responsive {
+    overflow-x: visible;
+  }
 }
 
 /* Player name column with avatar */

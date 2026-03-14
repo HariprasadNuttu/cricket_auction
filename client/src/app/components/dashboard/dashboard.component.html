@@ -182,9 +182,14 @@
         <!-- Teams Accordion -->
         <div class="col-12 col-md-8">
             <div class="card teams-accordion-card">
-                <div class="card-header d-flex align-items-center">
-                    <i class="bi bi-trophy-fill me-2 text-warning"></i>
-                    <span class="fw-bold">Teams</span>
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-trophy-fill me-2 text-warning"></i>
+                        <span class="fw-bold">Teams</span>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm" (click)="downloadTeamsExcel()" [disabled]="teams.length === 0" title="Export all team players to Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Export Excel
+                    </button>
                 </div>
                 <div class="card-body p-0">
                     <div class="accordion accordion-teams" id="teamsAccordion">

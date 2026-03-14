@@ -112,7 +112,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 3a. Validate minimum slot budget (prevent teams from getting stuck)
-            const remainingSlots = 15 - team.totalPlayers;
+            const remainingSlots = 17 - team.totalPlayers;
             const minimumRequiredBudget = remainingSlots * 20; // Base price per player
             if (team.remainingBudget - amount < minimumRequiredBudget && remainingSlots > 0) {
                 socket.emit('ERROR', { 
