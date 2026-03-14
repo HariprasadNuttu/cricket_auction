@@ -211,6 +211,9 @@
                                             <app-avatar [imageUrl]="p?.player?.imageUrl ?? p?.imageUrl" [name]="getPlayerName(p)" size="sm" [showPreviewOnHover]="true"></app-avatar>
                                             <span class="player-name">{{ getPlayerName(p) }}</span>
                                             <span class="sold-price">₹{{ p.soldPrice || 0 }}</span>
+                                            <button type="button" class="btn btn-sm btn-outline-primary download-player-btn" (click)="downloadPlayerImage(p, team)" title="Download premium image">
+                                                <i class="bi bi-download"></i>
+                                            </button>
                                         </div>
                                         <div class="team-total-row">
                                             <span>Total Spent</span>

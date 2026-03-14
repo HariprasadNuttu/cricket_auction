@@ -172,6 +172,11 @@
   min-width: 0;
 }
 
+.download-player-btn {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+}
+
 .player-row:last-of-type {
   margin-bottom: 0;
 }

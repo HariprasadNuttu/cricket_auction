@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { SocketService } from '../../../services/socket.service';
 import { AuthService } from '../../../services/auth.service';
 import { ApiService } from '../../../services/api.service';
+import { ImageService } from '../../../services/image.service';
 import { SoldCelebrationService } from '../../../services/sold-celebration.service';
 import { Subscription } from 'rxjs';
 
@@ -41,6 +42,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     private socketService: SocketService,
     private authService: AuthService,
     private apiService: ApiService,
+    private imageService: ImageService,
     private soldCelebration: SoldCelebrationService,
     private route: ActivatedRoute,
     private router: Router
@@ -522,5 +524,102 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     }
     
     return amount > this.auctionState.currentPrice && team.remainingBudget >= amount;
+  }
+
+  async downloadPlayerImage(p: any, team: any) {
+    const playerName = this.getPlayerName(p);
+    const teamName = team?.name ?? this.getTeamNameById(p.teamId) ?? 'Team';
+    const soldPrice = p.soldPrice ?? 0;
+    const imgUrl = this.imageService.getImageUrl(p?.player?.imageUrl ?? p?.imageUrl);
+
+    const loadImage = (url: string): Promise<HTMLImageElement> =>
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = url.startsWith('/') ? window.location.origin + url : url;
+      });
+
+    try {
+      const w = 420;
+      const h = 560;
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext('2d')!;
+
+      const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      bg.addColorStop(0, '#0f172a');
+      bg.addColorStop(0.5, '#1e293b');
+      bg.addColorStop(1, '#0f172a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+      const logoSize = 72;
+      const logoPad = 24;
+      try {
+        const logoImg = await loadImage('/assets/logo.png');
+        ctx.drawImage(logoImg, logoPad * scale, logoPad * scale, logoSize * scale, logoSize * scale);
+      } catch { /* ignore */ }
+
+      const imgSize = 160 * scale;
+      const imgX = (canvas.width - imgSize) / 2;
+      const imgY = 120 * scale;
+      if (imgUrl) {
+        try {
+          const playerImg = await loadImage(imgUrl);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, imgSize / 2, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(playerImg, imgX, imgY, imgSize, imgSize);
+          ctx.restore();
+        } catch {
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, imgSize / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(imgX + imgSize / 2, imgY + imgSize / 2, imgSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = `bold ${scale * 22}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.fillText('CONGRATULATIONS!', canvas.width / 2, 340 * scale);
+
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = `bold ${scale * 20}px system-ui`;
+      ctx.fillText(playerName, canvas.width / 2, 380 * scale);
+
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.9)';
+      ctx.font = `${scale * 14}px system-ui`;
+      ctx.fillText('Sold to', canvas.width / 2, 420 * scale);
+      ctx.font = `bold ${scale * 18}px system-ui`;
+      ctx.fillText(teamName, canvas.width / 2, 450 * scale);
+
+      ctx.fillStyle = '#22c55e';
+      ctx.font = `bold ${scale * 24}px system-ui`;
+      ctx.fillText(`₹${soldPrice}`, canvas.width / 2, 500 * scale);
+
+      const link = document.createElement('a');
+      link.download = `${playerName.replace(/[^a-zA-Z0-9]/g, '_')}_${teamName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Download failed:', e);
+      alert('Failed to download image. Please try again.');
+    }
   }
 }
