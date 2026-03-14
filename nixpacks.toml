@@ -14,4 +14,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd server && npx prisma db push --skip-generate || true && npx prisma db seed || true && node dist/index.js"
+cmd = "cd server && npx prisma db push --skip-generate || true && node dist/index.js"
