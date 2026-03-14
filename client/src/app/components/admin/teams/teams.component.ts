@@ -72,8 +72,9 @@ export class TeamsComponent implements OnInit {
       const cardH = 130;
       const cols = 5;
       const rows = Math.ceil(Math.max(players.length, 1) / cols);
+      const logoH = 56;
       const w = pad * 2 + cols * (cardW + 12) - 12;
-      const h = pad * 2 + 60 + rows * (cardH + 12) - 12;
+      const h = pad * 2 + logoH + 60 + rows * (cardH + 12) - 12;
       canvas.width = w * 2;
       canvas.height = h * 2;
       const ctx = canvas.getContext('2d')!;
@@ -86,31 +87,44 @@ export class TeamsComponent implements OnInit {
       ctx.lineWidth = 2;
       ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
 
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = `bold ${scale * 18}px system-ui`;
-      ctx.textAlign = 'center';
-      ctx.fillText(team.name.toUpperCase(), canvas.width / 2, scale * 36);
-
-      ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
-      ctx.font = `${scale * 11}px system-ui`;
-      ctx.fillText(`${players.length}/15 Players`, canvas.width / 2, scale * 52);
-
+      // Logo on the left
+      const logoUrl = '/assets/logo.png';
       const loadImage = (url: string): Promise<HTMLImageElement> =>
         new Promise((resolve, reject) => {
           const img = new Image();
-          const isSameOrigin = url.startsWith('/') || url.startsWith(window.location.origin);
-          if (!isSameOrigin) img.crossOrigin = 'anonymous';
+          img.crossOrigin = 'anonymous';
           img.onload = () => resolve(img);
           img.onerror = () => reject(new Error('Failed to load image'));
-          img.src = url;
+          img.src = url.startsWith('/') ? window.location.origin + url : url;
         });
+      const logoSize = scale * 56;
+      const logoPad = pad * scale;
+      try {
+        const logoImg = await loadImage(logoUrl);
+        ctx.drawImage(logoImg, logoPad, logoPad, logoSize, logoSize);
+      } catch {
+        // Fallback if logo fails to load
+      }
 
+      // Team name and count to the right of logo
+      const headerLeft = logoPad + logoSize + scale * 16;
+      const headerCenterY = logoPad + logoSize / 2;
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = `bold ${scale * 18}px system-ui`;
+      ctx.textAlign = 'left';
+      ctx.fillText(team.name.toUpperCase(), headerLeft, headerCenterY - scale * 8);
+
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
+      ctx.font = `${scale * 11}px system-ui`;
+      ctx.fillText(`${players.length}/15 Players`, headerLeft, headerCenterY + scale * 10);
+
+      const headerH = 56 + 40; // logo height + gap (logical units)
       for (let i = 0; i < players.length; i++) {
         const sp = players[i];
         const col = i % cols;
         const row = Math.floor(i / cols);
         const x = pad * scale + col * (cardW + 12) * scale;
-        const y = pad * scale + 60 * scale + row * (cardH + 12) * scale;
+        const y = pad * scale + headerH * scale + row * (cardH + 12) * scale;
 
         ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
         ctx.fillRect(x, y, cardW * scale, cardH * scale);

@@ -1,42 +1,84 @@
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">Register</div>
-                <div class="card-body">
-                    <form (ngSubmit)="register()">
-                        <div class="mb-3">
-                            <label class="form-label">Full Name</label>
-                            <input type="text" class="form-control" [(ngModel)]="name" name="name" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Email address</label>
-                            <input type="email" class="form-control" [(ngModel)]="email" name="email" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-control" [(ngModel)]="password" name="password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Role</label>
-                            <select class="form-select" [(ngModel)]="role" name="role">
-                                <option value="VIEWER">Viewer</option>
-                                <option value="OWNER">Team Owner</option>
-                                <option value="AUCTIONEER">Auctioneer</option>
-                                <option value="ADMIN">Admin</option>
-                            </select>
-                        </div>
-                        <div class="mb-3" *ngIf="role === 'OWNER'">
-                            <label class="form-label">Team Name</label>
-                            <input type="text" class="form-control" [(ngModel)]="teamName" name="teamName" required>
-                        </div>
+<div class="register-page">
+  <div class="register-bg">
+    <div class="register-bg-gradient"></div>
+    <div class="register-bg-pattern"></div>
+  </div>
 
-                        <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
-                        <button type="submit" class="btn btn-primary">Register</button>
-                        <a routerLink="/login" class="btn btn-link">Login</a>
-                    </form>
-                </div>
-            </div>
+  <div class="register-container">
+    <div class="register-card">
+      <div class="register-logo-wrap">
+        <img src="assets/logo.png" alt="Cricket Lover's" class="register-logo" />
+      </div>
+
+      <h1 class="register-title">Create Account</h1>
+      <p class="register-subtitle">Join the cricket auction</p>
+
+      <form (ngSubmit)="register()" class="register-form">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="name"
+            name="name"
+            placeholder="Your name"
+            required
+          />
         </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input
+            type="email"
+            class="form-input"
+            [(ngModel)]="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-input"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role</label>
+          <select class="form-input form-select" [(ngModel)]="role" name="role">
+            <option value="VIEWER">Viewer</option>
+            <option value="OWNER">Team Owner</option>
+            <option value="AUCTIONEER">Auctioneer</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+        <div class="form-group" *ngIf="role === 'OWNER'">
+          <label class="form-label">Team Name</label>
+          <input
+            type="text"
+            class="form-input"
+            [(ngModel)]="teamName"
+            name="teamName"
+            placeholder="Your team name"
+            required
+          />
+        </div>
+
+        <div *ngIf="error" class="register-error">
+          <i class="bi bi-exclamation-circle"></i>
+          {{ error }}
+        </div>
+
+        <button type="submit" class="btn-register">Register</button>
+        <p class="register-login">
+          Already have an account?
+          <a routerLink="/login" class="register-link">Sign In</a>
+        </p>
+      </form>
     </div>
+  </div>
 </div>
