@@ -179,7 +179,11 @@
           <form>
             <div class="mb-3">
               <label class="form-label">CSV File</label>
-              <input type="file" class="form-control" accept=".csv" (change)="onFileSelected($event)">
+              <label class="file-input-trigger" for="csv-file-input">
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                <span>{{ csvFile ? csvFile.name : 'Choose CSV File' }}</span>
+              </label>
+              <input id="csv-file-input" type="file" class="file-input-native" accept=".csv" (change)="onFileSelected($event)">
               <small class="form-text text-muted">Format: name,category,base_price,country</small>
             </div>
           </form>
@@ -211,7 +215,11 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Player Image</label>
-              <input type="file" class="form-control" accept="image/*" (change)="onImageSelected($event)">
+              <label class="file-input-trigger" for="player-image-input">
+                <i class="bi bi-camera-fill"></i>
+                <span>{{ imageFile ? 'Change Image' : 'Choose or Take Photo' }}</span>
+              </label>
+              <input id="player-image-input" type="file" class="file-input-native" accept="image/*" (change)="onImageSelected($event)">
               <small class="form-text text-muted">JPG, PNG, GIF or WebP. Max 2MB.</small>
             </div>
             <div class="mb-3">

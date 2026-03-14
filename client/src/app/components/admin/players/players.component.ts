@@ -189,6 +189,14 @@ export class PlayersComponent implements OnInit {
     this.csvFile = null;
     this.imageFile = null;
     this.revokeImagePreview();
+    this.resetFileInputs();
+  }
+
+  private resetFileInputs() {
+    const imgInput = document.getElementById('player-image-input') as HTMLInputElement | null;
+    const csvInput = document.getElementById('csv-file-input') as HTMLInputElement | null;
+    if (imgInput) imgInput.value = '';
+    if (csvInput) csvInput.value = '';
   }
 
   private revokeImagePreview() {
