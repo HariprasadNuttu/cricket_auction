@@ -5,6 +5,8 @@
 builder = "nixpacks"
 
 [deploy]
+# Use db push (schema sync), NOT migrate - this project has no migration files
+preDeployCommand = "cd server && npx prisma db push --skip-generate || true"
 startCommand = "bash start.sh"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
