@@ -25,8 +25,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
 
-      // 401 or 403 (e.g. "Please refresh your token or login again") -> try refresh, redirect to login if it fails
-      if (error.status === 401 || error.status === 403) {
+      // 401 only: token expired -> try refresh, redirect to login if it fails
+      // 403 = Forbidden (no permission) - refreshing won't help, avoid infinite retry loop
+      if (error.status === 401) {
         return authService.refreshToken().pipe(
           switchMap(newToken => {
             if (newToken) {
