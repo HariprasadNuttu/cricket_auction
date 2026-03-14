@@ -106,17 +106,16 @@ export class TeamsComponent implements OnInit {
         // Fallback if logo fails to load
       }
 
-      // Team name and count to the right of logo
-      const headerLeft = logoPad + logoSize + scale * 16;
+      // Team name and count centered
       const headerCenterY = logoPad + logoSize / 2;
       ctx.fillStyle = '#fbbf24';
       ctx.font = `bold ${scale * 18}px system-ui`;
-      ctx.textAlign = 'left';
-      ctx.fillText(team.name.toUpperCase(), headerLeft, headerCenterY - scale * 8);
+      ctx.textAlign = 'center';
+      ctx.fillText(team.name.toUpperCase(), canvas.width / 2, headerCenterY - scale * 8);
 
       ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
       ctx.font = `${scale * 11}px system-ui`;
-      ctx.fillText(`${players.length}/15 Players`, headerLeft, headerCenterY + scale * 10);
+      ctx.fillText(`${players.length}/15 Players`, canvas.width / 2, headerCenterY + scale * 10);
 
       const headerH = 56 + 40; // logo height + gap (logical units)
       for (let i = 0; i < players.length; i++) {
