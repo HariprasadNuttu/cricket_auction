@@ -171,3 +171,54 @@ export const removeSeasonOwner = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ error: 'Failed to remove owner' });
     }
 };
+
+const MIN_PASSWORD_LENGTH = 6;
+
+/** Admin-only: set a new password for a user who is a season owner for this season. */
+export const resetSeasonOwnerPassword = async (req: AuthRequest, res: Response) => {
+    try {
+        if (req.user?.role !== 'ADMIN') {
+            return res.status(403).json({ error: 'Only administrators can reset owner passwords' });
+        }
+
+        const { seasonId, userId } = req.params;
+        const { newPassword } = req.body;
+        const seasonIdNum = parseInt(seasonId);
+        const userIdNum = parseInt(userId);
+
+        if (!newPassword || typeof newPassword !== 'string') {
+            return res.status(400).json({ error: 'newPassword is required' });
+        }
+        if (newPassword.length < MIN_PASSWORD_LENGTH) {
+            return res.status(400).json({
+                error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+            });
+        }
+
+        const link = await prisma.seasonOwner.findUnique({
+            where: {
+                seasonId_userId: { seasonId: seasonIdNum, userId: userIdNum }
+            },
+            include: { user: { select: { id: true, role: true, email: true } } }
+        });
+
+        if (!link) {
+            return res.status(404).json({ error: 'This user is not an owner for this season' });
+        }
+
+        if (link.user.role !== Role.OWNER) {
+            return res.status(400).json({ error: 'Target user is not an owner account' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: userIdNum },
+            data: { password: hashedPassword }
+        });
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error: any) {
+        console.error('Error resetting owner password:', error);
+        res.status(500).json({ error: 'Failed to reset password' });
+    }
+};

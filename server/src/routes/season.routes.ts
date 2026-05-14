@@ -17,7 +17,8 @@ import {
 import {
     getSeasonOwners,
     addSeasonOwner,
-    removeSeasonOwner
+    removeSeasonOwner,
+    resetSeasonOwnerPassword
 } from '../controllers/seasonOwnerController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -30,6 +31,7 @@ router.get('/groups/:groupId/seasons', authenticateToken, getSeasonsByGroup);
 // Season owners (scoped per season - not shared across groups)
 router.get('/seasons/:seasonId/owners', authenticateToken, getSeasonOwners);
 router.post('/seasons/:seasonId/owners', authenticateToken, addSeasonOwner);
+router.post('/seasons/:seasonId/owners/:userId/reset-password', authenticateToken, resetSeasonOwnerPassword);
 router.delete('/seasons/:seasonId/owners/:userId', authenticateToken, removeSeasonOwner);
 
 // Team routes (must be before /seasons/:id to avoid :id capturing "2" in /seasons/2/teams)

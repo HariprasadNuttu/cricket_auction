@@ -248,3 +248,10 @@
   overflow: hidden;
   opacity: 0;
 }
+
+/* Add to Season modal — scrollable player checklist */
+.add-to-season-pick-list .add-to-season-rows {
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

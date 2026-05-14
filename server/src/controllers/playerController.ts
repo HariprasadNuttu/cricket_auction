@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import { parse } from 'csv-parse';
+import { PlayerCategory } from '@prisma/client';
+import * as XLSX from 'xlsx';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -15,11 +16,39 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for CSV (memory)
-const upload = multer({ 
+// Configure multer for player spreadsheet upload (.xlsx / .xls, memory)
+const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext === '.xlsx' || ext === '.xls') {
+            return cb(null, true);
+        }
+        cb(new Error('Only .xlsx or .xls spreadsheet files are allowed'));
+    }
 });
+
+/** Map first-sheet row keys to name, category, basePrice, country (flexible headers). */
+function normalizeSpreadsheetRow(row: Record<string, unknown>): {
+    name?: string;
+    category?: string;
+    basePrice?: string;
+    country?: string;
+} {
+    const map: Record<string, string> = {};
+    for (const [k, v] of Object.entries(row)) {
+        const key = String(k).trim().toLowerCase().replace(/\s+/g, '_');
+        if (key === '') continue;
+        map[key] = v != null && v !== '' ? String(v).trim() : '';
+    }
+    const name = map['name'] || map['player_name'] || map['player'];
+    const category = map['category'] || map['role'];
+    const basePrice =
+        map['base_price'] || map['baseprice'] || map['price'] || map['base'] || map['amount'];
+    const country = map['country'] || map['nation'] || '';
+    return { name, category, basePrice, country };
+}
 
 // Configure multer for player images (disk storage)
 const imageStorage = multer.diskStorage({
@@ -90,17 +119,16 @@ export const addPlayerToGroup = async (req: AuthRequest, res: Response) => {
     }
 };
 
-// Upload players via CSV
+// Upload players via Excel (.xlsx / .xls) — first sheet, header row required
 export const uploadPlayersCSV = async (req: AuthRequest, res: Response) => {
     try {
         const { groupId } = req.params;
         const groupIdNum = parseInt(groupId);
 
         if (!req.file) {
-            return res.status(400).json({ error: 'CSV file is required' });
+            return res.status(400).json({ error: 'Excel file (.xlsx or .xls) is required' });
         }
 
-        // Verify group exists
         const group = await prisma.group.findUnique({
             where: { id: groupIdNum }
         });
@@ -109,28 +137,61 @@ export const uploadPlayersCSV = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Group not found' });
         }
 
-        // Parse CSV
-        const csvContent = req.file.buffer.toString('utf-8');
-        const records = parse(csvContent, {
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-            bom: true // Handle BOM for Excel-generated CSVs
-        }) as unknown as any[];
+        let workbook: XLSX.WorkBook;
+        try {
+            workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        } catch {
+            return res.status(400).json({ error: 'Could not read spreadsheet file' });
+        }
+
+        if (!workbook.SheetNames.length) {
+            return res.status(400).json({ error: 'Spreadsheet has no sheets' });
+        }
+
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+            defval: '',
+            raw: false
+        });
 
         const results = {
             success: [] as any[],
             errors: [] as any[]
         };
 
-        for (const record of records) {
-            try {
-                const { name, category, basePrice, country } = record;
+        let processed = 0;
+        for (const raw of rawRows) {
+            const record = normalizeSpreadsheetRow(raw);
+            const { name, category, basePrice, country } = record;
 
-                if (!name || !category || !basePrice) {
+            if (!name && !category && !basePrice) {
+                continue;
+            }
+            processed++;
+
+            try {
+                if (!name || !category || basePrice === undefined || basePrice === '') {
                     results.errors.push({
-                        row: record,
-                        error: 'Missing required fields: name, category, basePrice'
+                        row: raw,
+                        error: 'Missing required fields: name, category, base_price (or basePrice)'
+                    });
+                    continue;
+                }
+
+                const priceNum = parseInt(String(basePrice), 10);
+                if (isNaN(priceNum) || priceNum < 0) {
+                    results.errors.push({
+                        row: raw,
+                        error: 'Invalid base_price (must be a non-negative integer)'
+                    });
+                    continue;
+                }
+
+                const catUpper = category.toUpperCase() as PlayerCategory;
+                if (!Object.values(PlayerCategory).includes(catUpper)) {
+                    results.errors.push({
+                        row: raw,
+                        error: `Invalid category "${category}". Use: BATSMAN, BOWLER, ALLROUNDER, WICKETKEEPER`
                     });
                     continue;
                 }
@@ -139,8 +200,8 @@ export const uploadPlayersCSV = async (req: AuthRequest, res: Response) => {
                     data: {
                         groupId: groupIdNum,
                         name: name.trim(),
-                        category: category.toUpperCase(),
-                        basePrice: parseInt(basePrice),
+                        category: catUpper,
+                        basePrice: priceNum,
                         country: country?.trim() || null,
                         status: 'ACTIVE'
                     }
@@ -149,21 +210,21 @@ export const uploadPlayersCSV = async (req: AuthRequest, res: Response) => {
                 results.success.push(player);
             } catch (error: any) {
                 results.errors.push({
-                    row: record,
+                    row: raw,
                     error: error.message
                 });
             }
         }
 
         res.json({
-            message: `Processed ${records.length} rows`,
+            message: `Processed ${processed} data rows`,
             success: results.success.length,
             errors: results.errors.length,
             details: results
         });
     } catch (error: any) {
-        console.error('Error uploading CSV:', error);
-        res.status(500).json({ error: 'Failed to upload CSV' });
+        console.error('Error uploading spreadsheet:', error);
+        res.status(500).json({ error: error.message || 'Failed to upload spreadsheet' });
     }
 };
 

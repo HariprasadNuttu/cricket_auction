@@ -79,6 +79,15 @@ export class ApiService {
     return this.http.delete<any>(`${this.apiUrl}/seasons/${seasonId}/owners/${userId}`, { headers: this.getHeaders() });
   }
 
+  /** Admin only: set a new login password for a season owner. */
+  resetSeasonOwnerPassword(seasonId: number, userId: number, newPassword: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.apiUrl}/seasons/${seasonId}/owners/${userId}/reset-password`,
+      { newPassword },
+      { headers: this.getHeaders() }
+    );
+  }
+
   // Teams APIs
   getTeamsBySeason(seasonId: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}/teams`, { headers: this.getHeaders() });
@@ -113,7 +122,8 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/groups/${groupId}/players`, data, { headers: this.getHeaders() });
   }
 
-  uploadPlayersCSV(groupId: number, file: File): Observable<any> {
+  /** Upload players from Excel (.xlsx / .xls). First sheet; columns: name, category, base_price, country (optional). */
+  uploadPlayersSpreadsheet(groupId: number, file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<any>(`${this.apiUrl}/groups/${groupId}/players/upload`, formData, { headers: this.getHeaders() });
@@ -203,8 +213,8 @@ export class ApiService {
     return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/resume`, {}, { headers: this.getHeaders() });
   }
 
-  completeAuction(seasonId: number): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/complete`, {}, { headers: this.getHeaders() });
+  completeAuction(seasonId: number, body?: { outcome?: 'sold' | 'unsold' }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auction/seasons/${seasonId}/complete`, body ?? {}, { headers: this.getHeaders() });
   }
 
   undoLastBid(seasonId: number): Observable<any> {

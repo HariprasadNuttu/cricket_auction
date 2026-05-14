@@ -45,8 +45,11 @@
             <button class="btn btn-sm btn-success" (click)="resumeAuction()" [disabled]="auctionState?.status !== 'PAUSED'">
               <i class="bi bi-play"></i> Resume
             </button>
-            <button class="btn btn-sm btn-primary" (click)="completeAuction()" [disabled]="auctionState?.status !== 'LIVE'">
-              <i class="bi bi-check"></i> Complete
+            <button class="btn btn-sm btn-success" (click)="finalizeAuctionSold()" [disabled]="auctionState?.status !== 'LIVE' && auctionState?.status !== 'PAUSED'">
+              <i class="bi bi-check-circle"></i> Sold
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" (click)="finalizeAuctionUnsold()" [disabled]="auctionState?.status !== 'LIVE' && auctionState?.status !== 'PAUSED'">
+              <i class="bi bi-skip-forward"></i> Unsold
             </button>
             <button class="btn btn-sm btn-danger" (click)="undoLastBid()" [disabled]="auctionState?.status !== 'LIVE'">
               <i class="bi bi-arrow-counterclockwise"></i> Undo

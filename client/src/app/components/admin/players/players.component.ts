@@ -23,8 +23,12 @@ export class PlayersComponent implements OnInit {
   showEditModal = false;
   showUploadModal = false;
   showAddToSeasonModal = false;
+  /** Season chosen inside "Add to Season" modal (may differ from page-level selectedSeasonId). */
+  modalSeasonId: number | null = null;
+  addToSeasonMode: 'all' | 'pick' = 'all';
+  pickedPlayerIds: number[] = [];
   selectedPlayer: any = null;
-  csvFile: File | null = null;
+  spreadsheetFile: File | null = null;
   formData = {
     name: '',
     category: 'BATSMAN',
@@ -168,16 +172,111 @@ export class PlayersComponent implements OnInit {
       alert('Please select a group first');
       return;
     }
-    this.csvFile = null;
+    this.spreadsheetFile = null;
     this.showUploadModal = true;
   }
 
   openAddToSeasonModal() {
-    if (!this.selectedGroupId || !this.selectedSeasonId) {
-      alert('Please select both group and season');
+    if (!this.selectedGroupId) {
+      alert('Please select a group first');
       return;
     }
-    this.showAddToSeasonModal = true;
+    this.apiService.getSeasonsByGroup(this.selectedGroupId).subscribe({
+      next: (data) => {
+        this.seasons = data.seasons || data || [];
+        if (this.seasons.length === 0) {
+          alert('No seasons for this group. Create a season under this group first.');
+          return;
+        }
+        this.addToSeasonMode = 'all';
+        this.pickedPlayerIds = [];
+        const sid = this.selectedSeasonId;
+        const hasSelected = sid != null && this.seasons.some((s: any) => Number(s.id) === Number(sid));
+        this.modalSeasonId = hasSelected ? Number(sid) : Number(this.seasons[0].id);
+        this.showAddToSeasonModal = true;
+      },
+      error: (e) => {
+        console.error('Failed to load seasons:', e);
+        alert(e.error?.message || 'Failed to load seasons');
+      }
+    });
+  }
+
+  get activeGroupPlayers(): any[] {
+    return this.players.filter((p: any) => p.status === 'ACTIVE');
+  }
+
+  get activeGroupPlayersCount(): number {
+    return this.activeGroupPlayers.length;
+  }
+
+  get pickedPlayerIdsCount(): number {
+    return this.pickedPlayerIds.length;
+  }
+
+  isPlayerPickedForSeason(playerId: number): boolean {
+    return this.pickedPlayerIds.includes(playerId);
+  }
+
+  togglePlayerPickedForSeason(playerId: number, checked: boolean) {
+    if (checked) {
+      if (!this.pickedPlayerIds.includes(playerId)) {
+        this.pickedPlayerIds = [...this.pickedPlayerIds, playerId];
+      }
+    } else {
+      this.pickedPlayerIds = this.pickedPlayerIds.filter((id) => id !== playerId);
+    }
+  }
+
+  selectAllActiveForSeason() {
+    this.pickedPlayerIds = this.activeGroupPlayers.map((p: any) => p.id);
+  }
+
+  clearPickedPlayers() {
+    this.pickedPlayerIds = [];
+  }
+
+  confirmAddPlayersToSeason() {
+    if (!this.modalSeasonId) {
+      alert('Please select a season');
+      return;
+    }
+    let playerIds: number[];
+    if (this.addToSeasonMode === 'all') {
+      playerIds = this.activeGroupPlayers.map((p: any) => p.id);
+    } else {
+      playerIds = [...this.pickedPlayerIds];
+    }
+    if (playerIds.length === 0) {
+      alert(
+        this.addToSeasonMode === 'all'
+          ? 'No active players in this group to add.'
+          : 'Select at least one player, or use "Add all active".'
+      );
+      return;
+    }
+
+    this.apiService.addPlayersToSeason(this.modalSeasonId, playerIds).subscribe({
+      next: (res: any) => {
+        const addedSeasonId = this.modalSeasonId;
+        const ok = res?.success ?? 0;
+        const err = res?.errors ?? 0;
+        this.closeModals();
+        this.loadPlayers();
+        if (this.viewMode === 'season' && this.selectedSeasonId === addedSeasonId) {
+          this.loadSeasonPlayers();
+        }
+        if (err > 0) {
+          alert(`Added ${ok} player(s). ${err} row(s) skipped (e.g. already in season).`);
+        } else {
+          alert(`Added ${ok} player(s) to the season.`);
+        }
+      },
+      error: (e) => {
+        console.error('Failed to add players to season:', e);
+        alert(e.error?.error || e.error?.message || 'Failed to add players to season');
+      }
+    });
   }
 
   closeModals() {
@@ -185,8 +284,11 @@ export class PlayersComponent implements OnInit {
     this.showEditModal = false;
     this.showUploadModal = false;
     this.showAddToSeasonModal = false;
+    this.modalSeasonId = null;
+    this.addToSeasonMode = 'all';
+    this.pickedPlayerIds = [];
     this.selectedPlayer = null;
-    this.csvFile = null;
+    this.spreadsheetFile = null;
     this.imageFile = null;
     this.revokeImagePreview();
     this.resetFileInputs();
@@ -194,9 +296,9 @@ export class PlayersComponent implements OnInit {
 
   private resetFileInputs() {
     const imgInput = document.getElementById('player-image-input') as HTMLInputElement | null;
-    const csvInput = document.getElementById('csv-file-input') as HTMLInputElement | null;
+    const sheetInput = document.getElementById('spreadsheet-file-input') as HTMLInputElement | null;
     if (imgInput) imgInput.value = '';
-    if (csvInput) csvInput.value = '';
+    if (sheetInput) sheetInput.value = '';
   }
 
   private revokeImagePreview() {
@@ -263,28 +365,39 @@ export class PlayersComponent implements OnInit {
     });
   }
 
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.csvFile = file;
+  onSpreadsheetSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'xlsx' && ext !== 'xls') {
+      alert('Please select an Excel file (.xlsx or .xls)');
+      return;
     }
+    this.spreadsheetFile = file;
   }
 
-  uploadCSV() {
-    if (!this.csvFile || !this.selectedGroupId) {
-      alert('Please select a CSV file');
+  uploadPlayersSpreadsheet() {
+    if (!this.spreadsheetFile || !this.selectedGroupId) {
+      alert('Please select an Excel file (.xlsx or .xls)');
       return;
     }
 
-    this.apiService.uploadPlayersCSV(this.selectedGroupId, this.csvFile).subscribe({
-      next: () => {
+    this.apiService.uploadPlayersSpreadsheet(this.selectedGroupId, this.spreadsheetFile).subscribe({
+      next: (res) => {
         this.closeModals();
         this.loadPlayers();
-        alert('Players uploaded successfully!');
+        const errCount = res?.errors ?? 0;
+        const ok = res?.success ?? 0;
+        if (errCount > 0) {
+          alert(`Upload finished: ${ok} added, ${errCount} row(s) had errors. Check server response for details.`);
+        } else {
+          alert('Players uploaded successfully!');
+        }
       },
       error: (e) => {
-        console.error('Failed to upload CSV:', e);
-        alert(e.error?.message || 'Failed to upload CSV file');
+        console.error('Failed to upload spreadsheet:', e);
+        alert(e.error?.message || e.error?.error || 'Failed to upload Excel file');
       }
     });
   }
@@ -382,28 +495,4 @@ export class PlayersComponent implements OnInit {
     }
   }
 
-  addPlayersToSeason() {
-    if (!this.selectedSeasonId) {
-      alert('Please select a season');
-      return;
-    }
-    // Get selected player IDs from checkboxes or select all active players
-    const playerIds = this.players.filter(p => p.status === 'ACTIVE').map(p => p.id);
-    if (playerIds.length === 0) {
-      alert('No active players selected');
-      return;
-    }
-
-    this.apiService.addPlayersToSeason(this.selectedSeasonId, playerIds).subscribe({
-      next: () => {
-        this.closeModals();
-        this.loadSeasonPlayers();
-        alert('Players added to season successfully!');
-      },
-      error: (e) => {
-        console.error('Failed to add players to season:', e);
-        alert(e.error?.message || 'Failed to add players to season');
-      }
-    });
-  }
 }

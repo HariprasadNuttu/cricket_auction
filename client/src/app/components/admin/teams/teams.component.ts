@@ -4,6 +4,7 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../../services/api.service';
+import { AuthService } from '../../../services/auth.service';
 import { ImageService } from '../../../services/image.service';
 
 @Component({
@@ -22,8 +23,12 @@ export class TeamsComponent implements OnInit {
   showEditModal = false;
   showAssignOwnerModal = false;
   showCreateOwnerModal = false;
+  showResetPasswordModal = false;
   showAssignPlayerModal = false;
   selectedTeam: any = null;
+  currentUser: { id: number; name: string; role: string } | null = null;
+  resetPasswordOwner: { id: number; name: string; email: string } | null = null;
+  resetPasswordForm = { newPassword: '', confirmPassword: '' };
   formData = {
     name: '',
     budget: 1000,
@@ -48,10 +53,15 @@ export class TeamsComponent implements OnInit {
 
   constructor(
     private apiService: ApiService,
+    private authService: AuthService,
     private imageService: ImageService,
     private route: ActivatedRoute,
     private router: Router
   ) { }
+
+  get isAdmin(): boolean {
+    return this.currentUser?.role === 'ADMIN';
+  }
 
   getTeamPlayers(team: any): any[] {
     return this.seasonPlayers.filter(
@@ -169,6 +179,9 @@ export class TeamsComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.authService.user$.subscribe((u) => {
+      this.currentUser = u;
+    });
     this.loadGroups();
     this.route.queryParams.subscribe(params => {
       if (params['groupId']) {
@@ -345,6 +358,41 @@ export class TeamsComponent implements OnInit {
     });
   }
 
+  openResetPasswordModal(owner: { id: number; name: string; email: string }) {
+    if (!this.isAdmin || !this.selectedSeasonId) return;
+    this.resetPasswordOwner = owner;
+    this.resetPasswordForm = { newPassword: '', confirmPassword: '' };
+    this.showResetPasswordModal = true;
+  }
+
+  closeResetPasswordModal() {
+    this.showResetPasswordModal = false;
+    this.resetPasswordOwner = null;
+    this.resetPasswordForm = { newPassword: '', confirmPassword: '' };
+  }
+
+  submitResetOwnerPassword() {
+    if (!this.selectedSeasonId || !this.resetPasswordOwner) return;
+    const { newPassword, confirmPassword } = this.resetPasswordForm;
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    this.apiService
+      .resetSeasonOwnerPassword(this.selectedSeasonId, this.resetPasswordOwner.id, newPassword)
+      .subscribe({
+        next: (res) => {
+          alert(res?.message || 'Password updated successfully. The owner can log in with the new password.');
+          this.closeResetPasswordModal();
+        },
+        error: (e) => alert(e.error?.error || e.error?.details || 'Failed to reset password')
+      });
+  }
+
   openEditModal(team: any) {
     this.selectedTeam = team;
     this.formData = {
@@ -368,6 +416,9 @@ export class TeamsComponent implements OnInit {
     this.showEditModal = false;
     this.showAssignOwnerModal = false;
     this.showCreateOwnerModal = false;
+    this.showResetPasswordModal = false;
+    this.resetPasswordOwner = null;
+    this.resetPasswordForm = { newPassword: '', confirmPassword: '' };
     this.showAssignPlayerModal = false;
     this.selectedTeam = null;
   }

@@ -48,6 +48,15 @@
       <div class="d-flex flex-wrap gap-2" *ngIf="owners.length > 0">
         <span *ngFor="let owner of owners" class="badge bg-primary d-inline-flex align-items-center gap-1 py-2">
           {{ owner.name }} ({{ owner.email }})
+          <button
+            *ngIf="isAdmin"
+            type="button"
+            class="btn btn-sm btn-warning ms-1"
+            (click)="openResetPasswordModal(owner)"
+            title="Set new login password for this owner"
+          >
+            <i class="bi bi-key"></i>
+          </button>
           <button type="button" class="btn btn-sm btn-light ms-1" (click)="removeOwner(owner)" title="Remove from season">&times;</button>
         </span>
       </div>
@@ -329,6 +338,57 @@
     </div>
   </div>
   <div class="modal-backdrop fade" [class.show]="showCreateOwnerModal" [style.display]="showCreateOwnerModal ? 'block' : 'none'" (click)="closeModals()"></div>
+
+  <!-- Reset owner password (admin) -->
+  <div class="modal fade" [class.show]="showResetPasswordModal" [style.display]="showResetPasswordModal ? 'flex' : 'none'">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-key"></i> Reset owner password</h5>
+          <button type="button" class="btn-close" (click)="closeResetPasswordModal()"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-3" *ngIf="resetPasswordOwner">
+            Set a new login password for <strong>{{ resetPasswordOwner.name }}</strong> ({{ resetPasswordOwner.email }}). Minimum 6 characters.
+          </p>
+          <form>
+            <div class="mb-3">
+              <label class="form-label">New password *</label>
+              <input
+                type="password"
+                class="form-control"
+                [(ngModel)]="resetPasswordForm.newPassword"
+                name="ownerResetNew"
+                autocomplete="new-password"
+                minlength="6"
+              />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Confirm password *</label>
+              <input
+                type="password"
+                class="form-control"
+                [(ngModel)]="resetPasswordForm.confirmPassword"
+                name="ownerResetConfirm"
+                autocomplete="new-password"
+                minlength="6"
+              />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeResetPasswordModal()">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="submitResetOwnerPassword()">Update password</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="modal-backdrop fade"
+    [class.show]="showResetPasswordModal"
+    [style.display]="showResetPasswordModal ? 'block' : 'none'"
+    (click)="closeResetPasswordModal()"
+  ></div>
 
   <!-- Edit Team Modal -->
   <div class="modal fade" [class.show]="showEditModal" [style.display]="showEditModal ? 'flex' : 'none'">

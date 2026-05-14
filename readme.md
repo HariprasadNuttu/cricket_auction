@@ -52,3 +52,18 @@ npm run dev:client   # App at http://localhost:4200
 **API:** http://localhost:3000  
 
 **Login:** admin@auction.com / admin123 (after seed)
+
+### 5. Bulk player upload (Admin → Players)
+
+Upload an **Excel** file (`.xlsx` or `.xls`), not CSV. Use the **first sheet** with a header row:
+
+| name | category | base_price | country (optional) |
+|------|----------|------------|--------------------|
+
+`category` must be one of: `BATSMAN`, `BOWLER`, `ALLROUNDER`, `WICKETKEEPER`.
+
+A sample file ships with the client at `client/src/assets/samples/players-upload-sample.xlsx` (download from the upload dialog as **Download sample XLSX**). To regenerate it after changing the template:
+
+```bash
+cd server && npm run sample:players-xlsx
+```

@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import prisma from '../utils/prisma';
+import { AUCTION_BID_TIMER_MS } from '../config/auction';
 
 // Rate limiting: Track last bid time per team
 const lastBidTime = new Map<number, number>();
@@ -199,7 +200,7 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
             }
 
             // 6. Atomic Bid Update with Race Condition Protection
-            const newTimerEndsAt = new Date(currentTime.getTime() + 60 * 1000); // Reset to 1 minute
+            const newTimerEndsAt = new Date(currentTime.getTime() + AUCTION_BID_TIMER_MS);
             
             // Get current version for optimistic locking
             const currentState = await prisma.auctionState.findUnique({ 

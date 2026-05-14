@@ -343,14 +343,14 @@ export const resumeAuction = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'No paused auction to resume' });
         }
 
-        // Calculate timer (use stored remaining time or default to 1 minute)
+        // Calculate timer (use stored remaining time or default bid window)
         let timerEndsAt: Date;
         const storedRemainingTime = req.body.remainingTime;
         
         if (storedRemainingTime && storedRemainingTime > 0) {
             timerEndsAt = new Date(Date.now() + storedRemainingTime);
         } else {
-            timerEndsAt = new Date(Date.now() + 60000);
+            timerEndsAt = new Date(Date.now() + AUCTION_BID_TIMER_MS);
         }
 
         // Update status to LIVE
@@ -402,6 +402,7 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
     try {
         const { seasonId } = req.params;
         const seasonIdNum = parseInt(seasonId);
+        const outcome = req.body?.outcome as 'sold' | 'unsold' | undefined;
 
         const auctionState = await prisma.auctionState.findUnique({ 
             where: { seasonId: seasonIdNum } 
@@ -411,7 +412,6 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'No active auction to complete' });
         }
 
-        // Get season player
         const seasonPlayer = await prisma.seasonPlayer.findUnique({
             where: { id: auctionState.currentPlayerId },
             include: {
@@ -423,18 +423,90 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Season player not found' });
         }
 
-        // Check if there's a winning bidder
-        if (auctionState.currentBidderTeamId && auctionState.currentPrice > seasonPlayer.player.basePrice) {
-            // Player is sold
-            const winningTeam = await prisma.team.findUnique({ 
-                where: { id: auctionState.currentBidderTeamId } 
+        const basePrice = seasonPlayer.player.basePrice;
+
+        // --- Explicit Unsold (skip auction; no sale) ---
+        if (outcome === 'unsold') {
+            await prisma.$transaction([
+                prisma.seasonPlayer.update({
+                    where: { id: seasonPlayer.id },
+                    data: {
+                        status: 'UNSOLD',
+                        teamId: null,
+                        soldPrice: null,
+                        soldType: null,
+                        soldAt: null
+                    }
+                }),
+                prisma.auctionState.update({
+                    where: { seasonId: seasonIdNum },
+                    data: {
+                        status: 'READY',
+                        currentPlayerId: null,
+                        currentPrice: 0,
+                        currentBidderTeamId: null,
+                        timerEndsAt: null
+                    }
+                }),
+                prisma.auctionLog.create({
+                    data: {
+                        seasonId: seasonIdNum,
+                        eventType: 'player_unsold',
+                        userId: req.user?.userId || null,
+                        playerId: seasonPlayer.playerId,
+                        details: JSON.stringify({ reason: 'Manual unsold' })
+                    }
+                })
+            ]);
+
+            if (ioInstance) {
+                ioInstance.emit('AUCTION_COMPLETE', {
+                    seasonId: seasonIdNum,
+                    seasonPlayerId: seasonPlayer.id,
+                    status: 'UNSOLD'
+                });
+            }
+
+            return res.json({
+                message: 'Player marked as unsold',
+                seasonPlayerId: seasonPlayer.id
+            });
+        }
+
+        // --- Sold path: explicit "sold" OR timer/auto (strict bid above base) ---
+        const explicitSold = outcome === 'sold';
+        if (explicitSold && !auctionState.currentBidderTeamId) {
+            return res.status(400).json({ error: 'No current bidder to sell to' });
+        }
+        if (explicitSold && auctionState.currentPrice < basePrice) {
+            return res.status(400).json({ error: 'Invalid auction price' });
+        }
+
+        const autoSold =
+            !explicitSold &&
+            !!auctionState.currentBidderTeamId &&
+            auctionState.currentPrice > basePrice;
+
+        const manualSold =
+            explicitSold &&
+            !!auctionState.currentBidderTeamId &&
+            auctionState.currentPrice >= basePrice;
+
+        if (autoSold || manualSold) {
+            const winningTeam = await prisma.team.findUnique({
+                where: { id: auctionState.currentBidderTeamId! }
             });
 
             if (!winningTeam) {
                 return res.status(404).json({ error: 'Winning team not found' });
             }
 
-            // Update season player status and assign to team
+            if (winningTeam.remainingBudget < auctionState.currentPrice) {
+                return res.status(400).json({
+                    error: `Insufficient budget. Team has ₹${winningTeam.remainingBudget} remaining; sale requires ₹${auctionState.currentPrice}.`
+                });
+            }
+
             await prisma.$transaction([
                 prisma.seasonPlayer.update({
                     where: { id: seasonPlayer.id },
@@ -447,7 +519,7 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
                     }
                 }),
                 prisma.team.update({
-                    where: { id: auctionState.currentBidderTeamId },
+                    where: { id: auctionState.currentBidderTeamId! },
                     data: {
                         remainingBudget: { decrement: auctionState.currentPrice },
                         totalPlayers: { increment: 1 }
@@ -473,13 +545,13 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
                         amount: auctionState.currentPrice,
                         details: JSON.stringify({
                             soldPrice: auctionState.currentPrice,
-                            teamName: winningTeam.name
+                            teamName: winningTeam.name,
+                            manual: explicitSold
                         })
                     }
                 })
             ]);
 
-            // Broadcast auction completion (include player/team names for celebration overlay)
             if (ioInstance) {
                 const p = seasonPlayer.player as any;
                 ioInstance.emit('AUCTION_COMPLETE', {
@@ -495,58 +567,61 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
                 });
             }
 
-            res.json({ 
+            return res.json({
                 message: 'Player sold successfully',
                 seasonPlayerId: seasonPlayer.id,
                 teamId: auctionState.currentBidderTeamId,
                 soldPrice: auctionState.currentPrice
             });
-        } else {
-            // Player is unsold
-            await prisma.$transaction([
-                prisma.seasonPlayer.update({
-                    where: { id: seasonPlayer.id },
-                    data: {
-                        status: 'UNSOLD'
-                    }
-                }),
-                prisma.auctionState.update({
-                    where: { seasonId: seasonIdNum },
-                    data: {
-                        status: 'READY',
-                        currentPlayerId: null,
-                        currentPrice: 0,
-                        currentBidderTeamId: null,
-                        timerEndsAt: null
-                    }
-                }),
-                prisma.auctionLog.create({
-                    data: {
-                        seasonId: seasonIdNum,
-                        eventType: 'player_unsold',
-                        userId: req.user?.userId || null,
-                        playerId: seasonPlayer.playerId,
-                        details: JSON.stringify({
-                            reason: 'No valid bids'
-                        })
-                    }
-                })
-            ]);
+        }
 
-            // Broadcast auction completion
-            if (ioInstance) {
-                ioInstance.emit('AUCTION_COMPLETE', {
+        // --- Auto / no qualifying sale → unsold ---
+        await prisma.$transaction([
+            prisma.seasonPlayer.update({
+                where: { id: seasonPlayer.id },
+                data: {
+                    status: 'UNSOLD',
+                    teamId: null,
+                    soldPrice: null,
+                    soldType: null,
+                    soldAt: null
+                }
+            }),
+            prisma.auctionState.update({
+                where: { seasonId: seasonIdNum },
+                data: {
+                    status: 'READY',
+                    currentPlayerId: null,
+                    currentPrice: 0,
+                    currentBidderTeamId: null,
+                    timerEndsAt: null
+                }
+            }),
+            prisma.auctionLog.create({
+                data: {
                     seasonId: seasonIdNum,
-                    seasonPlayerId: seasonPlayer.id,
-                    status: 'UNSOLD'
-                });
-            }
+                    eventType: 'player_unsold',
+                    userId: req.user?.userId || null,
+                    playerId: seasonPlayer.playerId,
+                    details: JSON.stringify({
+                        reason: explicitSold ? 'Sold request failed checks' : 'No valid bids (timer or auto)'
+                    })
+                }
+            })
+        ]);
 
-            res.json({ 
-                message: 'Player marked as unsold',
-                seasonPlayerId: seasonPlayer.id
+        if (ioInstance) {
+            ioInstance.emit('AUCTION_COMPLETE', {
+                seasonId: seasonIdNum,
+                seasonPlayerId: seasonPlayer.id,
+                status: 'UNSOLD'
             });
         }
+
+        return res.json({
+            message: 'Player marked as unsold',
+            seasonPlayerId: seasonPlayer.id
+        });
     } catch (error) {
         console.error('Error completing auction:', error);
         res.status(500).json({ error: 'Failed to complete auction' });

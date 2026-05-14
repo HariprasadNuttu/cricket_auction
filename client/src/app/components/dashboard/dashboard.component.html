@@ -87,16 +87,20 @@
                             (click)="placeBidAsOwner(auctionState.currentPrice + 50)">+50</button>
                     </div>
                     
-                    <!-- Admin Controls: Pause/Resume/Sold/Undo -->
+                    <!-- Admin Controls: Pause/Resume/Sold/Unsold/Undo -->
                     <div class="mt-2" *ngIf="user?.role === 'ADMIN' && auctionState">
-                        <div class="btn-group" role="group" *ngIf="auctionState.status === 'LIVE'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center" *ngIf="auctionState.status === 'LIVE'">
                             <button class="btn btn-warning btn-sm" (click)="pauseAuction()">
                                 ⏸ Pause
                             </button>
                             <button class="btn btn-success btn-sm" 
                                 [disabled]="!auctionState.currentBidderTeamId"
-                                (click)="sellPlayer()">
-                                ✅ Sold
+                                (click)="finalizeAuctionSold()">
+                                Sold
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                (click)="finalizeAuctionUnsold()">
+                                Unsold
                             </button>
                             <button class="btn btn-secondary btn-sm" 
                                 [disabled]="!auctionState.currentBidderTeamId"
@@ -105,14 +109,18 @@
                                 ↶ Undo
                             </button>
                         </div>
-                        <div class="btn-group" role="group" *ngIf="auctionState.status === 'PAUSED'">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center" *ngIf="auctionState.status === 'PAUSED'">
                             <button class="btn btn-primary btn-sm" (click)="resumeAuction()">
                                 ▶ Resume
                             </button>
                             <button class="btn btn-success btn-sm" 
                                 [disabled]="!auctionState.currentBidderTeamId"
-                                (click)="sellPlayer()">
-                                ✅ Sold
+                                (click)="finalizeAuctionSold()">
+                                Sold
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm"
+                                (click)="finalizeAuctionUnsold()">
+                                Unsold
                             </button>
                             <button class="btn btn-secondary btn-sm" 
                                 [disabled]="!auctionState.currentBidderTeamId"

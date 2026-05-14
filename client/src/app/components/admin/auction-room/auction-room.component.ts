@@ -35,6 +35,8 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
   currentGroup: any = null;
   expandedTeamId: number | null = null;
 
+  private timerExpiryFinalizeSent = false;
+
   private subs: Subscription = new Subscription();
 
   constructor(
@@ -243,12 +245,16 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
         const diff = timerEndsAt.getTime() - now.getTime();
 
         if (diff > 0) {
+          this.timerExpiryFinalizeSent = false;
           const seconds = Math.floor(diff / 1000);
           const minutes = Math.floor(seconds / 60);
           this.timer = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
         } else {
           this.timer = '00:00';
-          this.onTimerExpired();
+          if (!this.timerExpiryFinalizeSent) {
+            this.timerExpiryFinalizeSent = true;
+            this.onTimerExpired();
+          }
         }
       } else if (this.auctionState && this.auctionState.status === 'PAUSED') {
         this.timer = 'PAUSED';
@@ -267,9 +273,9 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
   }
 
   onTimerExpired() {
-    if (this.auctionState && this.auctionState.status === 'LIVE') {
-      this.completeAuction();
-    }
+    if (!(this.auctionState && this.auctionState.status === 'LIVE')) return;
+    if (this.user?.role !== 'ADMIN' && this.user?.role !== 'AUCTIONEER') return;
+    this.completeAuction();
   }
 
   pauseAuction() {
@@ -300,17 +306,35 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     });
   }
 
-  completeAuction() {
+  finalizeAuctionSold() {
     if (!this.selectedSeasonId) return;
-    this.apiService.completeAuction(this.selectedSeasonId).subscribe({
+    if (!this.auctionState?.currentBidderTeamId) {
+      alert('No current bidder. Use Unsold to skip this player, or wait for a bid.');
+      return;
+    }
+    this.completeAuction({ outcome: 'sold' });
+  }
+
+  finalizeAuctionUnsold() {
+    if (!this.selectedSeasonId) return;
+    if (!confirm('Mark this player as Unsold and skip the auction for them?')) return;
+    this.completeAuction({ outcome: 'unsold' });
+  }
+
+  completeAuction(body?: { outcome?: 'sold' | 'unsold' }) {
+    if (!this.selectedSeasonId) return;
+    this.apiService.completeAuction(this.selectedSeasonId, body).subscribe({
       next: () => {
         console.log('Auction completed');
+        this.timerExpiryFinalizeSent = false;
         setTimeout(() => {
           this.loadAuctionState();
         }, 500);
       },
       error: (e) => {
         console.error('Failed to complete auction:', e);
+        this.timerExpiryFinalizeSent = false;
+        alert(e.error?.error || e.error?.message || 'Failed to complete auction');
         this.loadAuctionState();
       }
     });
