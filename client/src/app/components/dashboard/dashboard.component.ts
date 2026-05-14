@@ -32,6 +32,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   groups: any[] = [];
   seasons: any[] = [];
   expandedTeamId: number | null = null;
+  /** From getAuctionState — includes min/max players per team */
+  season: any = null;
 
   /** Prevents repeated POST when timer stays at 0 until state refreshes */
   private timerExpiryFinalizeSent = false;
@@ -364,6 +366,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.apiService.getAuctionState(this.selectedSeasonId).subscribe({
       next: (data) => {
         this.auctionState = data.state;
+        this.season = data.season ?? null;
         this.teams = data.teams || [];
         this.players = data.players || [];
         this.currentPlayer = data.currentPlayer;
@@ -440,6 +443,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getSeasonName(): string {
     const season = this.seasons?.find((s: any) => s.id === this.selectedSeasonId);
     return season?.name ?? '--';
+  }
+
+  getSeasonMaxPlayers(): number {
+    const m = this.season?.maxPlayersPerTeam;
+    if (m != null && !Number.isNaN(Number(m)) && Number(m) > 0) return Number(m);
+    const fromList = this.seasons?.find((s: any) => s.id === this.selectedSeasonId)?.maxPlayersPerTeam;
+    if (fromList != null && !Number.isNaN(Number(fromList)) && Number(fromList) > 0) return Number(fromList);
+    return 17;
   }
 
   getTeamNameById(teamId: number | null): string {
@@ -705,7 +716,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     for (const team of this.teams) {
       const players = this.getTeamSoldPlayers(team.id);
       if (players.length === 0) {
-        rows.push([team.name, '-', '-', '0', '0/17']);
+        rows.push([team.name, '-', '-', '0', `0/${this.getSeasonMaxPlayers()}`]);
       } else {
         players.forEach((p: any, i: number) => {
           rows.push([
@@ -713,7 +724,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.getPlayerName(p),
             this.getPlayerCategory(p),
             String(p.soldPrice ?? 0),
-            i === 0 ? `${players.length}/17` : ''
+            i === 0 ? `${players.length}/${this.getSeasonMaxPlayers()}` : ''
           ]);
         });
       }

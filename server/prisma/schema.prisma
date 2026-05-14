@@ -121,6 +121,8 @@ model Season {
   name           String        // e.g., "2026 Season", "Summer Cup 2026"
   year           Int?
   budget         Int?          // Default budget per team (e.g., 2000)
+  minPlayersPerTeam Int        @default(17) // Below this, bids may be blocked unless enough budget reserved for remaining slots
+  maxPlayersPerTeam Int        @default(17) // Squad cap per team for this season
   status         SeasonStatus  @default(DRAFT)
   auctioneerId   Int?          // Auctioneer who conducts this season's auction
   auctionStarted Boolean       @default(false)

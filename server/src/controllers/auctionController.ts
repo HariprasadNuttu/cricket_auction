@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { Server } from 'socket.io';
 import { AUCTION_BID_TIMER_MS } from '../config/auction';
+import { maxPlayersForSeason } from '../utils/seasonPlayerLimits';
 
 interface AuthRequest extends Request {
     user?: any;
@@ -494,11 +495,19 @@ export const completeAuction = async (req: AuthRequest, res: Response) => {
 
         if (autoSold || manualSold) {
             const winningTeam = await prisma.team.findUnique({
-                where: { id: auctionState.currentBidderTeamId! }
+                where: { id: auctionState.currentBidderTeamId! },
+                include: { season: true }
             });
 
             if (!winningTeam) {
                 return res.status(404).json({ error: 'Winning team not found' });
+            }
+
+            const maxPlayers = maxPlayersForSeason(winningTeam.season);
+            if (winningTeam.totalPlayers >= maxPlayers) {
+                return res.status(400).json({
+                    error: `Team squad is full (${maxPlayers} players). Cannot complete this sale.`
+                });
             }
 
             if (winningTeam.remainingBudget < auctionState.currentPrice) {

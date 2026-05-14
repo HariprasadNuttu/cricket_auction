@@ -272,6 +272,14 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     return this.currentSeason?.name || this.seasons.find(s => s.id === this.selectedSeasonId)?.name || 'Season';
   }
 
+  getSeasonMaxPlayers(): number {
+    const m = this.currentSeason?.maxPlayersPerTeam;
+    if (m != null && !Number.isNaN(Number(m)) && Number(m) > 0) return Number(m);
+    const fromList = this.seasons.find(s => s.id === this.selectedSeasonId)?.maxPlayersPerTeam;
+    if (fromList != null && !Number.isNaN(Number(fromList)) && Number(fromList) > 0) return Number(fromList);
+    return 17;
+  }
+
   onTimerExpired() {
     if (!(this.auctionState && this.auctionState.status === 'LIVE')) return;
     if (this.user?.role !== 'ADMIN' && this.user?.role !== 'AUCTIONEER') return;
@@ -483,7 +491,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     for (const team of this.teams) {
       const players = this.getTeamSoldPlayers(team.id);
       if (players.length === 0) {
-        rows.push([team.name, '-', '-', '0', '0/17']);
+        rows.push([team.name, '-', '-', '0', `0/${this.getSeasonMaxPlayers()}`]);
       } else {
         players.forEach((p: any, i: number) => {
           rows.push([
@@ -491,7 +499,7 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
             this.getPlayerName(p),
             this.getPlayerCategory(p),
             String(p.soldPrice ?? 0),
-            i === 0 ? `${players.length}/17` : ''
+            i === 0 ? `${players.length}/${this.getSeasonMaxPlayers()}` : ''
           ]);
         });
       }

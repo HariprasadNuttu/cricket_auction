@@ -50,11 +50,11 @@ export class ApiService {
     return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}`, { headers: this.getHeaders() });
   }
 
-  createSeason(groupId: number, data: { name: string; year: number; budget?: number; auctioneerId?: number | null }): Observable<any> {
+  createSeason(groupId: number, data: { name: string; year: number; budget?: number; auctioneerId?: number | null; minPlayersPerTeam?: number; maxPlayersPerTeam?: number }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/groups/${groupId}/seasons`, data, { headers: this.getHeaders() });
   }
 
-  updateSeason(seasonId: number, data: { name?: string; year?: number; budget?: number; status?: string; auctioneerId?: number | null }): Observable<any> {
+  updateSeason(seasonId: number, data: { name?: string; year?: number; budget?: number; status?: string; auctioneerId?: number | null; minPlayersPerTeam?: number; maxPlayersPerTeam?: number }): Observable<any> {
     return this.http.put<any>(`${this.apiUrl}/seasons/${seasonId}`, data, { headers: this.getHeaders() });
   }
 

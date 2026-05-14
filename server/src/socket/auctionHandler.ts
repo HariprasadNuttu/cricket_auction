@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import prisma from '../utils/prisma';
 import { AUCTION_BID_TIMER_MS } from '../config/auction';
+import { maxPlayersForSeason, minPlayersForSeason } from '../utils/seasonPlayerLimits';
 
 // Rate limiting: Track last bid time per team
 const lastBidTime = new Map<number, number>();
@@ -103,7 +104,15 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 socket.emit('ERROR', { message: 'Team does not belong to this season' });
                 return;
             }
-            
+
+            const maxPlayers = maxPlayersForSeason(team.season);
+            if (team.totalPlayers >= maxPlayers) {
+                socket.emit('ERROR', {
+                    message: `Team squad is full (${maxPlayers} players). Cannot place bids.`
+                });
+                return;
+            }
+
             // Budget validation
             if (team.remainingBudget < amount) {
                 socket.emit('ERROR', { 
@@ -112,14 +121,20 @@ export const registerAuctionHandlers = (io: Server, socket: Socket) => {
                 return;
             }
 
-            // 3a. Validate minimum slot budget (prevent teams from getting stuck)
-            const remainingSlots = 17 - team.totalPlayers;
-            const minimumRequiredBudget = remainingSlots * 20; // Base price per player
-            if (team.remainingBudget - amount < minimumRequiredBudget && remainingSlots > 0) {
-                socket.emit('ERROR', { 
-                    message: `Cannot bid: Team needs at least ${minimumRequiredBudget} for remaining ${remainingSlots} player slot(s)` 
-                });
-                return;
+            // Reserve budget for remaining slots only until minimum squad size is reached
+            const minPlayers = minPlayersForSeason(team.season);
+            const remainingSlots = maxPlayers - team.totalPlayers;
+            if (
+                remainingSlots > 0 &&
+                team.totalPlayers < minPlayers
+            ) {
+                const minimumRequiredBudget = remainingSlots * 20;
+                if (team.remainingBudget - amount < minimumRequiredBudget) {
+                    socket.emit('ERROR', {
+                        message: `Cannot bid: Team needs at least ${minimumRequiredBudget} for remaining ${remainingSlots} player slot(s)`
+                    });
+                    return;
+                }
             }
 
             // 3b. Rate Limiting: Prevent spam bidding

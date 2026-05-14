@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
+import { clampSeasonPlayerLimits } from '../utils/seasonPlayerLimits';
 
 interface AuthRequest extends Request {
     user?: any;
@@ -8,7 +9,7 @@ interface AuthRequest extends Request {
 export const createSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { groupId } = req.params;
-        const { name, year, budget, auctioneerId } = req.body;
+        const { name, year, budget, auctioneerId, minPlayersPerTeam, maxPlayersPerTeam } = req.body;
         const groupIdNum = parseInt(groupId);
 
         if (!name) {
@@ -22,6 +23,11 @@ export const createSeason = async (req: AuthRequest, res: Response) => {
 
         if (!group) {
             return res.status(404).json({ error: 'Group not found' });
+        }
+
+        const limits = clampSeasonPlayerLimits(minPlayersPerTeam, maxPlayersPerTeam);
+        if ('error' in limits) {
+            return res.status(400).json({ error: limits.error });
         }
 
         const auctioneerIdNum = auctioneerId != null && auctioneerId !== '' ? parseInt(auctioneerId) : null;
@@ -38,6 +44,8 @@ export const createSeason = async (req: AuthRequest, res: Response) => {
                 name,
                 year: year != null ? parseInt(year) : null,
                 budget: budget != null ? parseInt(budget) : null,
+                minPlayersPerTeam: limits.minPlayersPerTeam,
+                maxPlayersPerTeam: limits.maxPlayersPerTeam,
                 auctioneerId: auctioneerIdNum,
                 status: 'DRAFT'
             },
@@ -154,7 +162,7 @@ export const getSeasonById = async (req: AuthRequest, res: Response) => {
 export const updateSeason = async (req: AuthRequest, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, year, budget, status, auctioneerId } = req.body;
+        const { name, year, budget, status, auctioneerId, minPlayersPerTeam, maxPlayersPerTeam } = req.body;
         const seasonId = parseInt(id);
 
         const updateData: Record<string, any> = {};
@@ -173,6 +181,25 @@ export const updateSeason = async (req: AuthRequest, res: Response) => {
                 }
                 updateData.auctioneerId = auctioneerIdNum;
             }
+        }
+
+        if (minPlayersPerTeam !== undefined || maxPlayersPerTeam !== undefined) {
+            const existing = await prisma.season.findUnique({
+                where: { id: seasonId },
+                select: { minPlayersPerTeam: true, maxPlayersPerTeam: true }
+            });
+            if (!existing) {
+                return res.status(404).json({ error: 'Season not found' });
+            }
+            const limits = clampSeasonPlayerLimits(
+                minPlayersPerTeam !== undefined ? minPlayersPerTeam : existing.minPlayersPerTeam,
+                maxPlayersPerTeam !== undefined ? maxPlayersPerTeam : existing.maxPlayersPerTeam
+            );
+            if ('error' in limits) {
+                return res.status(400).json({ error: limits.error });
+            }
+            updateData.minPlayersPerTeam = limits.minPlayersPerTeam;
+            updateData.maxPlayersPerTeam = limits.maxPlayersPerTeam;
         }
 
         const season = await prisma.season.update({
@@ -264,6 +291,8 @@ export const cloneSeason = async (req: AuthRequest, res: Response) => {
                 name,
                 year: sourceSeason.year ? sourceSeason.year + 1 : null,
                 budget: sourceSeason.budget,
+                minPlayersPerTeam: sourceSeason.minPlayersPerTeam,
+                maxPlayersPerTeam: sourceSeason.maxPlayersPerTeam,
                 status: 'DRAFT'
             }
         });

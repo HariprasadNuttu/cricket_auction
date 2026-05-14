@@ -22,7 +22,9 @@ export class SeasonsComponent implements OnInit {
     name: '',
     year: new Date().getFullYear(),
     budget: 10000,
-    auctioneerId: null as number | null
+    auctioneerId: null as number | null,
+    minPlayersPerTeam: 11,
+    maxPlayersPerTeam: 17
   };
 
   constructor(
@@ -91,7 +93,9 @@ export class SeasonsComponent implements OnInit {
       name: '',
       year: new Date().getFullYear(),
       budget: 10000,
-      auctioneerId: selectedGroup?.auctioneerId ?? selectedGroup?.auctioneer?.id ?? null
+      auctioneerId: selectedGroup?.auctioneerId ?? selectedGroup?.auctioneer?.id ?? null,
+      minPlayersPerTeam: 11,
+      maxPlayersPerTeam: 17
     };
     this.showCreateModal = true;
   }
@@ -102,7 +106,9 @@ export class SeasonsComponent implements OnInit {
       name: season.name,
       year: season.year,
       budget: season.budget || 10000,
-      auctioneerId: season.auctioneerId ?? season.auctioneer?.id ?? null
+      auctioneerId: season.auctioneerId ?? season.auctioneer?.id ?? null,
+      minPlayersPerTeam: season.minPlayersPerTeam ?? 17,
+      maxPlayersPerTeam: season.maxPlayersPerTeam ?? 17
     };
     this.showEditModal = true;
   }
@@ -118,12 +124,20 @@ export class SeasonsComponent implements OnInit {
       alert('Season name is required');
       return;
     }
+    const min = Number(this.formData.minPlayersPerTeam);
+    const max = Number(this.formData.maxPlayersPerTeam);
+    if (min < 1 || max < 1 || min > max) {
+      alert('Min and max players must be at least 1, and min cannot be greater than max.');
+      return;
+    }
 
     this.apiService.createSeason(this.selectedGroupId, {
       name: this.formData.name,
       year: this.formData.year,
       budget: this.formData.budget,
-      auctioneerId: this.formData.auctioneerId
+      auctioneerId: this.formData.auctioneerId,
+      minPlayersPerTeam: this.formData.minPlayersPerTeam,
+      maxPlayersPerTeam: this.formData.maxPlayersPerTeam
     }).subscribe({
       next: () => {
         this.closeModals();
@@ -141,12 +155,20 @@ export class SeasonsComponent implements OnInit {
       alert('Season name is required');
       return;
     }
+    const min = Number(this.formData.minPlayersPerTeam);
+    const max = Number(this.formData.maxPlayersPerTeam);
+    if (min < 1 || max < 1 || min > max) {
+      alert('Min and max players must be at least 1, and min cannot be greater than max.');
+      return;
+    }
 
     this.apiService.updateSeason(this.selectedSeason.id, {
       name: this.formData.name,
       year: this.formData.year,
       budget: this.formData.budget,
-      auctioneerId: this.formData.auctioneerId
+      auctioneerId: this.formData.auctioneerId,
+      minPlayersPerTeam: this.formData.minPlayersPerTeam,
+      maxPlayersPerTeam: this.formData.maxPlayersPerTeam
     }).subscribe({
       next: () => {
         this.closeModals();

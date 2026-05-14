@@ -81,7 +81,7 @@
           <tbody>
             <tr *ngFor="let team of teams">
               <td>{{ team.name }}</td>
-              <td class="text-end">{{ getTeamPlayers(team).length }}/17</td>
+              <td class="text-end">{{ getTeamPlayers(team).length }}/{{ getSeasonMaxPlayers() }}</td>
             </tr>
           </tbody>
         </table>
@@ -110,7 +110,7 @@
           <div class="ipl-team-card" [attr.data-team-id]="team.id">
             <div class="ipl-team-header">
               <h3 class="ipl-team-name">{{ team.name }}</h3>
-              <span class="ipl-team-badge">{{ getTeamPlayers(team).length }}/17</span>
+              <span class="ipl-team-badge">{{ getTeamPlayers(team).length }}/{{ getSeasonMaxPlayers() }}</span>
             </div>
             <div class="ipl-players-grid">
               <div *ngFor="let sp of getTeamPlayers(team)" class="ipl-player-card">
@@ -248,7 +248,7 @@
             <td>{{ team.owner?.name || team.ownerName || '-' }}</td>
             <td>₹{{ team.totalBudget || team.budget || 0 }}</td>
             <td>₹{{ team.remainingBudget ?? team.totalBudget ?? team.budget ?? 0 }}</td>
-            <td>{{ team.totalPlayers || team.playerCount || 0 }}/17</td>
+            <td>{{ team.totalPlayers || team.playerCount || 0 }}/{{ getSeasonMaxPlayers() }}</td>
             <td>
               <button class="btn btn-sm btn-info me-2" (click)="openAssignOwnerModal(team)">
                 <i class="bi bi-person-check"></i> Assign Owner

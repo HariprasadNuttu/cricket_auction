@@ -26,6 +26,7 @@
             <th>Season Name</th>
             <th>Year</th>
             <th>Budget</th>
+            <th>Players (min–max)</th>
             <th>Auctioneer</th>
             <th>Status</th>
             <th>Actions</th>
@@ -36,6 +37,7 @@
             <td><strong>{{ season.name }}</strong></td>
             <td>{{ season.year }}</td>
             <td>₹{{ season.budget || 0 }}</td>
+            <td>{{ season.minPlayersPerTeam ?? 17 }} – {{ season.maxPlayersPerTeam ?? 17 }}</td>
             <td>{{ season.auctioneer?.name || '-' }}</td>
             <td>
               <span class="badge" [ngClass]="{
@@ -57,7 +59,7 @@
             </td>
           </tr>
           <tr *ngIf="seasons.length === 0">
-            <td colspan="6" class="text-center text-muted">No seasons found. Create your first season!</td>
+            <td colspan="8" class="text-center text-muted">No seasons found. Create your first season!</td>
           </tr>
         </tbody>
       </table>
@@ -94,6 +96,17 @@
                 <option *ngFor="let a of auctioneers" [value]="a.id">{{ a.name }} ({{ a.email }})</option>
               </select>
               <small class="text-muted">Auctioneer who will conduct this season's auction.</small>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Min players per team</label>
+                <input type="number" class="form-control" [(ngModel)]="formData.minPlayersPerTeam" name="minPlCreate" min="1" max="50" />
+                <small class="text-muted">Reserve-budget rule applies only until this count is reached.</small>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Max players per team</label>
+                <input type="number" class="form-control" [(ngModel)]="formData.maxPlayersPerTeam" name="maxPlCreate" min="1" max="50" />
+              </div>
             </div>
           </form>
         </div>
@@ -135,6 +148,17 @@
                 <option *ngFor="let a of auctioneers" [value]="a.id">{{ a.name }} ({{ a.email }})</option>
               </select>
               <small class="text-muted">Auctioneer who will conduct this season's auction.</small>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Min players per team</label>
+                <input type="number" class="form-control" [(ngModel)]="formData.minPlayersPerTeam" name="minPlEdit" min="1" max="50" />
+                <small class="text-muted">Reserve-budget rule applies only until this count is reached.</small>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Max players per team</label>
+                <input type="number" class="form-control" [(ngModel)]="formData.maxPlayersPerTeam" name="maxPlEdit" min="1" max="50" />
+              </div>
             </div>
           </form>
         </div>

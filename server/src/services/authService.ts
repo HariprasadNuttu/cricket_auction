@@ -1,11 +1,12 @@
 import prisma from '../utils/prisma';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { User, Role } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
+/** Access token lifetime (session length before refresh). Default 3 hours. Override with JWT_ACCESS_EXPIRY (e.g. `2h`, `10800`). */
+const ACCESS_TOKEN_EXPIRY = (process.env.JWT_ACCESS_EXPIRY || '3h') as SignOptions['expiresIn'];
+const REFRESH_TOKEN_EXPIRY = (process.env.JWT_REFRESH_EXPIRY || '7d') as SignOptions['expiresIn'];
 
 export const loginUser = async (email: string, password: string) => {
     const user = await prisma.user.findUnique({ where: { email } });

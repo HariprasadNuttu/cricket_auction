@@ -50,6 +50,8 @@ export class TeamsComponent implements OnInit {
     teamId: null as number | null,
     amount: 0
   };
+  /** Squad limits for the selected season (from season API). */
+  seasonPlayerCaps = { min: 17, max: 17 };
 
   constructor(
     private apiService: ApiService,
@@ -67,6 +69,10 @@ export class TeamsComponent implements OnInit {
     return this.seasonPlayers.filter(
       (sp: any) => sp.status === 'SOLD' && (sp.teamId === team.id || sp.team?.id === team.id)
     );
+  }
+
+  getSeasonMaxPlayers(): number {
+    return this.seasonPlayerCaps.max > 0 ? this.seasonPlayerCaps.max : 17;
   }
 
   getImageUrl(url: string | null | undefined): string {
@@ -125,7 +131,7 @@ export class TeamsComponent implements OnInit {
 
       ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
       ctx.font = `${scale * 11}px system-ui`;
-      ctx.fillText(`${players.length}/17 Players`, canvas.width / 2, headerCenterY + scale * 10);
+      ctx.fillText(`${players.length}/${this.getSeasonMaxPlayers()} Players`, canvas.width / 2, headerCenterY + scale * 10);
 
       const headerH = 56 + 40; // logo height + gap (logical units)
       for (let i = 0; i < players.length; i++) {
@@ -245,6 +251,7 @@ export class TeamsComponent implements OnInit {
     this.apiService.getTeamsBySeason(this.selectedSeasonId).subscribe({
       next: (data) => {
         this.teams = Array.isArray(data) ? data : (data?.teams || data?.data || []);
+        this.loadSeasonPlayerCaps();
         this.loadOwners();
         this.loadSeasonPlayers();
         this.loadGroupPlayers();
@@ -288,6 +295,24 @@ export class TeamsComponent implements OnInit {
   // Players already directly assigned to teams this season
   get assignedPlayers() {
     return this.seasonPlayers.filter((sp: any) => sp.status === 'SOLD' && sp.soldType === 'DIRECT_ASSIGN');
+  }
+
+  loadSeasonPlayerCaps() {
+    if (!this.selectedSeasonId) {
+      this.seasonPlayerCaps = { min: 17, max: 17 };
+      return;
+    }
+    this.apiService.getSeasonById(this.selectedSeasonId).subscribe({
+      next: (s: any) => {
+        this.seasonPlayerCaps = {
+          min: s?.minPlayersPerTeam ?? 17,
+          max: s?.maxPlayersPerTeam ?? 17
+        };
+      },
+      error: () => {
+        this.seasonPlayerCaps = { min: 17, max: 17 };
+      }
+    });
   }
 
   loadOwners() {
@@ -558,7 +583,7 @@ export class TeamsComponent implements OnInit {
     for (const team of this.teams) {
       const players = this.getTeamPlayers(team);
       if (players.length === 0) {
-        rows.push([team.name, '-', '-', '0', '0/17']);
+        rows.push([team.name, '-', '-', '0', `0/${this.getSeasonMaxPlayers()}`]);
       } else {
         players.forEach((sp: any, i: number) => {
           rows.push([
@@ -566,7 +591,7 @@ export class TeamsComponent implements OnInit {
             sp.player?.name ?? sp.name ?? '-',
             sp.player?.category ?? sp.category ?? '-',
             String(sp.soldPrice ?? 0),
-            i === 0 ? `${players.length}/17` : ''
+            i === 0 ? `${players.length}/${this.getSeasonMaxPlayers()}` : ''
           ]);
         });
       }

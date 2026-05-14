@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { parse } from 'csv-parse';
 import multer from 'multer';
+import { maxPlayersForSeason } from '../utils/seasonPlayerLimits';
 
 interface AuthRequest extends Request {
     user?: any;
@@ -106,10 +107,15 @@ export const directAssignPlayer = async (req: AuthRequest, res: Response) => {
             return res.status(400).json({ error: 'Team does not belong to this season' });
         }
 
-        // Validate team squad not full (max 17 players)
-        if (team.totalPlayers >= 17) {
-            return res.status(400).json({ 
-                error: 'Team squad is full (17 players). Cannot assign more players.' 
+        const seasonRow = await prisma.season.findUnique({
+            where: { id: seasonIdNum },
+            select: { maxPlayersPerTeam: true }
+        });
+        const maxPlayers = maxPlayersForSeason(seasonRow);
+
+        if (team.totalPlayers >= maxPlayers) {
+            return res.status(400).json({
+                error: `Team squad is full (${maxPlayers} players). Cannot assign more players.`
             });
         }
 
@@ -201,6 +207,8 @@ export const bulkDirectAssign = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: 'Season not found' });
         }
 
+        const maxPlayers = maxPlayersForSeason(season);
+
         // Parse CSV
         const csvContent = req.file.buffer.toString('utf-8');
         const records = parse(csvContent, {
@@ -263,11 +271,10 @@ export const bulkDirectAssign = async (req: AuthRequest, res: Response) => {
                     continue;
                 }
 
-                // Validate squad not full
-                if (team.totalPlayers >= 17) {
+                if (team.totalPlayers >= maxPlayers) {
                     results.errors.push({
                         row: record,
-                        error: `Team "${team_name}" squad is full`
+                        error: `Team "${team_name}" squad is full (${maxPlayers} players)`
                     });
                     continue;
                 }
