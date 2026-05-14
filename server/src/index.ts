@@ -12,10 +12,10 @@ const httpServer = createServer(app);
 httpServer.keepAliveTimeout = 65000;
 httpServer.headersTimeout = 66000;
 
-const allowedOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN || 'http://localhost:4200';
+const staticSocketOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN;
 const io = new Server(httpServer, {
     cors: {
-        origin: allowedOrigin,
+        origin: staticSocketOrigin || true,
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -27,8 +27,9 @@ const io = new Server(httpServer, {
 // Initialize socket handlers
 initializeSocket(io);
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-httpServer.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+httpServer.listen(PORT, HOST, () => {
+    console.log(`Server is running on http://${HOST}:${PORT}`);
 });

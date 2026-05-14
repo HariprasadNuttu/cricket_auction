@@ -13,10 +13,14 @@ import auctionRoomRoutes from './routes/auctionRoom.routes';
 
 const app = express();
 
-// CORS: allow Angular client (dev: localhost:4200, prod: same origin)
-const allowedOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN || 'http://localhost:4200';
+// Behind Railway / reverse proxies
+app.set('trust proxy', 1);
+
+// CORS: set CLIENT_ORIGIN (or ORIGIN) to your exact frontend URL in dev if needed.
+// In production on Railway (same host serves API + Angular), leave unset so we reflect the request Origin.
+const staticCorsOrigin = process.env.CLIENT_ORIGIN || process.env.ORIGIN;
 app.use(cors({
-    origin: allowedOrigin,
+    origin: staticCorsOrigin || true,
     credentials: true
 }));
 app.use(express.json());

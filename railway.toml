@@ -1,5 +1,12 @@
 # Railway deployment config
 # Set region to asia-southeast1 in Railway dashboard: Project Settings > Region
+#
+# Env vars:
+# - PORT: set automatically by Railway
+# - DATABASE_URL: from Postgres plugin
+# - JWT_SECRET: set in Variables
+# - Optional CLIENT_ORIGIN / ORIGIN: only if the browser hits a *different* host than this API
+#   (e.g. Angular on Vercel, API on Railway). If this service serves both UI + API, leave unset.
 
 [build]
 builder = "nixpacks"
