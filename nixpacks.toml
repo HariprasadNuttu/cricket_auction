@@ -14,4 +14,5 @@ cmds = [
 ]
 
 [start]
-cmd = "cd server && npx prisma db push --skip-generate || true && node dist/index.js"
+# Must match repo start.sh: bind PORT quickly (no full client build here).
+cmd = "bash start.sh"
