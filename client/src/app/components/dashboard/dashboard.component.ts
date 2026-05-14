@@ -479,6 +479,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.getTeamSoldPlayers(teamId).reduce((sum, p) => sum + (p.soldPrice || 0), 0);
   }
 
+  getTeamRemainingBudget(team: any): number {
+    const total = team?.totalBudget ?? team?.budget ?? 2000;
+    return total - this.getTeamTotalSpent(team?.id);
+  }
+
   placeBidForTeam(amount: number, teamId?: number | string) {
     // Only admin can place bids
     if (this.user?.role !== 'ADMIN') {

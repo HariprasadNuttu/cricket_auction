@@ -203,8 +203,8 @@
                                            [class.bi-chevron-down]="isTeamExpanded(team.id)" 
                                            [class.bi-chevron-right]="!isTeamExpanded(team.id)"></i>
                                         <span class="fw-semibold">{{ team.name }}</span>
-                                        <span class="badge bg-primary rounded-pill">₹{{ team.remainingBudget }} left</span>
-                                        <span class="badge bg-secondary rounded-pill">{{ team.totalPlayers }} players</span>
+                                        <span class="badge bg-primary rounded-pill">₹{{ getTeamRemainingBudget(team) }} left</span>
+                                        <span class="badge bg-secondary rounded-pill">{{ getTeamSoldPlayers(team.id).length }} players</span>
                                     </div>
                                     <span class="text-muted small">Total: ₹{{ team.totalBudget ?? 2000 }}</span>
                                 </div>

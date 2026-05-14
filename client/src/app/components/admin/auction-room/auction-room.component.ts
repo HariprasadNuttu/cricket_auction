@@ -448,6 +448,11 @@ export class AuctionRoomComponent implements OnInit, OnDestroy {
     return this.getTeamSoldPlayers(teamId).reduce((sum, p) => sum + (p.soldPrice || 0), 0);
   }
 
+  getTeamRemainingBudget(team: any): number {
+    const total = team?.totalBudget ?? team?.budget ?? 2000;
+    return total - this.getTeamTotalSpent(team?.id);
+  }
+
   downloadTeamsExcel() {
     const rows: string[][] = [];
     rows.push(['Team', 'Player Name', 'Category', 'Sold Price (₹)', 'Total Players']);

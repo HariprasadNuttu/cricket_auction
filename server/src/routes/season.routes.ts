@@ -9,6 +9,7 @@ import {
 } from '../controllers/seasonController';
 import {
     getTeamsBySeason,
+    getTeamsPlayersMapping,
     createTeam,
     updateTeam,
     deleteTeam
@@ -33,6 +34,7 @@ router.delete('/seasons/:seasonId/owners/:userId', authenticateToken, removeSeas
 
 // Team routes (must be before /seasons/:id to avoid :id capturing "2" in /seasons/2/teams)
 router.get('/seasons/:seasonId/teams', authenticateToken, getTeamsBySeason);
+router.get('/seasons/:seasonId/teams/players-mapping', authenticateToken, getTeamsPlayersMapping);
 router.post('/seasons/:seasonId/teams', authenticateToken, createTeam);
 
 // Direct season routes

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../utils/prisma';
 import { Server } from 'socket.io';
+import { AUCTION_BID_TIMER_MS } from '../config/auction';
 
 interface AuthRequest extends Request {
     user?: any;
@@ -190,7 +191,7 @@ export const startAuction = async (req: AuthRequest, res: Response) => {
         }
 
         // Update Auction State
-        const timerEndsAt = new Date(Date.now() + 60000); // 1 minute timer
+        const timerEndsAt = new Date(Date.now() + AUCTION_BID_TIMER_MS);
         await prisma.auctionState.update({
             where: { seasonId: seasonIdNum },
             data: {

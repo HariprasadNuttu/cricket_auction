@@ -15,6 +15,9 @@ export const getTeamsBySeason = async (req: AuthRequest, res: Response) => {
             include: {
                 owner: {
                     select: { id: true, name: true, email: true }
+                },
+                _count: {
+                    select: { seasonPlayers: true }
                 }
             },
             orderBy: { name: 'asc' }
@@ -24,6 +27,37 @@ export const getTeamsBySeason = async (req: AuthRequest, res: Response) => {
     } catch (error: any) {
         console.error('Error fetching teams:', error);
         res.status(500).json({ error: 'Failed to fetch teams' });
+    }
+};
+
+/** Returns team -> player count mapping for a season */
+export const getTeamsPlayersMapping = async (req: AuthRequest, res: Response) => {
+    try {
+        const { seasonId } = req.params;
+        const seasonIdNum = parseInt(seasonId);
+
+        const teams = await prisma.team.findMany({
+            where: { seasonId: seasonIdNum },
+            select: {
+                id: true,
+                name: true,
+                _count: {
+                    select: { seasonPlayers: true }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        const mapping = teams.map((t) => ({
+            teamId: t.id,
+            teamName: t.name,
+            playerCount: t._count.seasonPlayers
+        }));
+
+        res.json({ mapping });
+    } catch (error: any) {
+        console.error('Error fetching teams players mapping:', error);
+        res.status(500).json({ error: 'Failed to fetch teams players mapping' });
     }
 };
 

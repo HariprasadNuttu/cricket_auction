@@ -84,6 +84,14 @@ export class ApiService {
     return this.http.get<any>(`${this.apiUrl}/seasons/${seasonId}/teams`, { headers: this.getHeaders() });
   }
 
+  /** Get team -> player count mapping for a season */
+  getTeamsPlayersMapping(seasonId: number): Observable<{ mapping: { teamId: number; teamName: string; playerCount: number }[] }> {
+    return this.http.get<{ mapping: { teamId: number; teamName: string; playerCount: number }[] }>(
+      `${this.apiUrl}/seasons/${seasonId}/teams/players-mapping`,
+      { headers: this.getHeaders() }
+    );
+  }
+
   createTeam(seasonId: number, data: { name: string; ownerId?: number; budget?: number }): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/seasons/${seasonId}/teams`, data, { headers: this.getHeaders() });
   }
